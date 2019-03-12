@@ -4,6 +4,7 @@ import sys
 import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
+from geometry_msgs.msg import TwistStamped
 from std_msgs.msg import Int32
 
 import math
@@ -34,13 +35,14 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.velocity_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
         rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
-
-        self.waypoints = None
+        self.velocity = 0
         self.num_waypoints = 0
+        self.waypoints = None
         self.update_wp_velocities = True
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
@@ -50,6 +52,10 @@ class WaypointUpdater(object):
     def waypoints_cb(self, msg):
         self.waypoints = msg.waypoints
         self.num_waypoints = len(self.waypoints)
+
+
+    def velocity_cb(self, msg):
+        self.velocity = msg.twist.linear.x
 
 
     def pose_cb(self, pose):
@@ -87,19 +93,32 @@ class WaypointUpdater(object):
             self.update_wp_velocities = True
             return
 
+        #if not self.update_wp_velocities:
+        #    return
+
+        print("Red light at: #" + str(light_wp_idx))
         self.update_wp_velocities = False
 
         # TODO: Can I use a hardcoded value? Or do I have to calculate the position of the stop line?
-        standstill_wp_idx = light_wp_idx - 27
+        standstill_offset = 2
+        standstill_wp_idx = light_wp_idx - standstill_offset
 
-        #TODO: How to reset velocities?
-        print('Setting WP ' + str(standstill_wp_idx) + ' to 0')
-        self.set_waypoint_velocity(standstill_wp_idx, 0)
+        for i in range(standstill_offset):
+            wp_idx = light_wp_idx - i
+            self.set_waypoint_velocity(wp_idx, 0)
 
-        for i in range(10):
+        #print('Setting WP ' + str(standstill_wp_idx) + ' to 0')
+        #self.set_waypoint_velocity(standstill_wp_idx, 0)
+
+        steps = max(int(self.velocity) * 2, 2)
+        vel_step = self.velocity / steps
+
+        for i in range(steps):
             wp_idx = (standstill_wp_idx - i) % self.num_waypoints
-            wp_velocity = self.get_waypoint_velocity(wp_idx) - i
+            wp_velocity = i * vel_step
+            #wp_velocity = 0 if wp_velocity < 0 else wp_velocity
             self.set_waypoint_velocity(wp_idx, wp_velocity)
+            #print("Set #" + str(wp_idx) + " to " + str(wp_velocity))
 
 
     def obstacle_cb(self, msg):

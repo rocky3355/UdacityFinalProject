@@ -10,7 +10,7 @@ class Controller(object):
     def __init__(self, yaw_controller):
         self.throttle_pid = PID(0.1, 0.05, 0, 0.0, 1.0)
         # TODO: Use same pid for throttle and brake, limit by maxdecel/maxaccel
-        self.brake_pid = PID(30.0, 1.0, 0.0, 0.0, 1000.0)
+        self.brake_pid = PID(200.0, 0.0, 0.0, 0.0, 1000.0)
         #self.steer_pid = PID(5.0, 1.0, 0.0, -8.0, 8.0)
         self.is_first_message = True
         self.last_msg_timestamp = 0
@@ -41,7 +41,9 @@ class Controller(object):
         # TODO: Limit values
         # TODO: Return Nm for braking
         # TODO: Reset when dbw_enabled toggles (also is_first_message)
-        if vel_diff > 0:
+        if target_velocity.twist.linear.x < 0.5 and vel_diff < 0 and vel_diff > -0.5:
+            brake = 1000
+        elif vel_diff > 0:
             throttle = self.throttle_pid.step(vel_diff, delta_time)
         else:
             brake = self.brake_pid.step(-vel_diff, delta_time)
@@ -51,6 +53,6 @@ class Controller(object):
 
         #print(str(current_velocity.twist.linear.x) + ' / ' + str(target_velocity.twist.linear.x) + '   --   ' + str(target_velocity.twist.angular.z) + '  /  ' + str(steer))
 
-        #print(str(throttle) + " / " + str(brake))
+        #print(str(vel_diff) + " / " + str(throttle) + " / " + str(brake))
 
         return throttle, brake, steer

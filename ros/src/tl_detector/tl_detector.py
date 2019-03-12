@@ -22,6 +22,11 @@ class TLDetector(object):
         self.camera_image = None
         self.lights = []
 
+        config_file = rospy.get_param("/traffic_light_config")
+        self.config = yaml.load(config_file)
+
+        self.stop_lines_wp_idx = []
+
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
@@ -56,6 +61,15 @@ class TLDetector(object):
 
     def waypoints_cb(self, waypoints):
         self.waypoints = waypoints
+
+        for stop_line in self.config['stop_line_positions']:
+            stop_line_pose = PoseStamped()
+            stop_line_pose.pose.position.x = stop_line[0]
+            stop_line_pose.pose.position.y = stop_line[1]
+            stop_line_pose.pose.position.z = 0
+            stop_line_wp_idx = self.get_closest_waypoint(stop_line_pose)
+            self.stop_lines_wp_idx.append(stop_line_wp_idx)
+            #print("Adding stop line for #" + str(stop_line_wp_idx))
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
@@ -147,6 +161,20 @@ class TLDetector(object):
         #Get classification
         return self.light_classifier.get_classification(cv_image)
 
+
+    def get_stop_line_wp_idx(self, light_wp_idx):
+        min_idx_diff = 9999999
+        closest_stop_line_wp_idx = -1
+
+        for stop_line_wp_idx in self.stop_lines_wp_idx:
+            idx_diff = abs(stop_line_wp_idx - light_wp_idx)
+            if idx_diff < min_idx_diff:
+                min_idx_diff = idx_diff
+                closest_stop_line_wp_idx = stop_line_wp_idx
+
+        return closest_stop_line_wp_idx
+
+
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
             location and color
@@ -169,19 +197,20 @@ class TLDetector(object):
             #print(car_wp_idx)
             for tr_light in self.lights:
                 light_wp_idx = self.get_closest_waypoint(tr_light.pose)
+                stop_line_wp_idx = self.get_stop_line_wp_idx(light_wp_idx)
                 # TODO: What if car is near last waypoint and traffic near first waypoints?
-                if light_wp_idx > car_wp_idx:
-                    idx_diff = light_wp_idx - car_wp_idx
+                if stop_line_wp_idx > car_wp_idx:
+                    idx_diff = stop_line_wp_idx - car_wp_idx
                     if idx_diff < min_idx_diff:
                         min_idx_diff = idx_diff
                         light = tr_light
-                        closest_light_wp_idx = light_wp_idx
+                        closest_stop_line_wp_idx = stop_line_wp_idx
 
-        if light:
+        if light and min_idx_diff < 300:
             state = self.get_light_state(light)
             #print('State: ' + str(state))
-            #print(closest_light_wp_idx)
-            return closest_light_wp_idx, state
+            #print(closest_stop_line_wp_idx)
+            return closest_stop_line_wp_idx, state
 
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN

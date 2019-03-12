@@ -1,2 +1,6 @@
 ros/build
 ros/devel
+ros/src/.idea
+*.pyc
+logs/
+ros/.catkin_tools

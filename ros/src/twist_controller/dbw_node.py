@@ -94,6 +94,7 @@ class DBWNode(object):
             #   self.publish(throttle, brake, steer)
 
             #TODO
+            #TODO: Reset PID controllers if dbw_enabled is false
             #if self.dbw_enabled:
             throttle, brake, steering = self.controller.control(self.velocity, self.twist)
             self.publish(throttle, brake, steering)
@@ -103,7 +104,7 @@ class DBWNode(object):
 
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()
-        tcmd.enable = True
+        tcmd.enable = (brake == 0)
         tcmd.pedal_cmd_type = ThrottleCmd.CMD_PERCENT
         tcmd.pedal_cmd = throttle
         self.throttle_pub.publish(tcmd)
