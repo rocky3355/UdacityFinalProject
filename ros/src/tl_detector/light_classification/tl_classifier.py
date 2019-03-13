@@ -39,4 +39,4 @@ class TLClassifier(object):
         if len(keypoints) > 0:
             return TrafficLight.RED
 
-        return TrafficLight.GREEN
+        return TrafficLight.UNKNOWN

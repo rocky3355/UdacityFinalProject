@@ -96,21 +96,21 @@ class WaypointUpdater(object):
         #if not self.update_wp_velocities:
         #    return
 
-        print("Red light at: #" + str(light_wp_idx))
+        #print("Red light at: #" + str(light_wp_idx))
         self.update_wp_velocities = False
 
         # TODO: Can I use a hardcoded value? Or do I have to calculate the position of the stop line?
-        standstill_offset = 2
+        standstill_offset = 5
         standstill_wp_idx = light_wp_idx - standstill_offset
 
         for i in range(standstill_offset):
             wp_idx = light_wp_idx - i
             self.set_waypoint_velocity(wp_idx, 0)
 
-        #print('Setting WP ' + str(standstill_wp_idx) + ' to 0')
+        print('Setting WP ' + str(standstill_wp_idx) + ' to 0')
         #self.set_waypoint_velocity(standstill_wp_idx, 0)
 
-        steps = max(int(self.velocity) * 2, 2)
+        steps = max(int(self.velocity) * 2, standstill_offset)
         vel_step = self.velocity / steps
 
         for i in range(steps):

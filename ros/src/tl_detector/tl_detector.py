@@ -71,8 +71,10 @@ class TLDetector(object):
             self.stop_lines_wp_idx.append(stop_line_wp_idx)
             #print("Adding stop line for #" + str(stop_line_wp_idx))
 
+
     def traffic_cb(self, msg):
         self.lights = msg.lights
+
 
     def image_cb(self, msg):
         """Identifies red lights in the incoming camera image and publishes the index
@@ -190,7 +192,7 @@ class TLDetector(object):
         #stop_line_positions = self.config['stop_line_positions']
 
         min_idx_diff = 99999
-        closest_light_wp_idx = -1
+        closest_stop_line_wp_idx = -1
 
         if(self.pose):
             car_wp_idx = self.get_closest_waypoint(self.pose)
@@ -198,18 +200,17 @@ class TLDetector(object):
             for tr_light in self.lights:
                 light_wp_idx = self.get_closest_waypoint(tr_light.pose)
                 stop_line_wp_idx = self.get_stop_line_wp_idx(light_wp_idx)
+                #print(str(light_wp_idx) + "  /  " + str(stop_line_wp_idx))
                 # TODO: What if car is near last waypoint and traffic near first waypoints?
-                if stop_line_wp_idx > car_wp_idx:
-                    idx_diff = stop_line_wp_idx - car_wp_idx
-                    if idx_diff < min_idx_diff:
-                        min_idx_diff = idx_diff
-                        light = tr_light
-                        closest_stop_line_wp_idx = stop_line_wp_idx
+                idx_diff = abs(stop_line_wp_idx - car_wp_idx)
+                if idx_diff < min_idx_diff:
+                    min_idx_diff = idx_diff
+                    light = tr_light
+                    closest_stop_line_wp_idx = stop_line_wp_idx
 
-        if light and min_idx_diff < 300:
+        if light:
             state = self.get_light_state(light)
-            #print('State: ' + str(state))
-            #print(closest_stop_line_wp_idx)
+            #print('State: ' + str(state) + "  /  Stopline: #" + str(closest_stop_line_wp_idx) + "  /  Car: #" + str(car_wp_idx))
             return closest_stop_line_wp_idx, state
 
         self.waypoints = None
