@@ -1,3 +1,4 @@
+import rospy
 from pid import PID
 from yaw_controller import YawController
 
@@ -12,8 +13,7 @@ class Controller(object):
         # TODO: Use same pid for throttle and brake, limit by maxdecel/maxaccel
         self.brake_pid = PID(200.0, 0.0, 0.0, 0.0, 1000.0)
         #self.steer_pid = PID(5.0, 1.0, 0.0, -8.0, 8.0)
-        self.is_first_message = True
-        self.last_msg_timestamp = 0
+        self.last_msg_timestamp = None
         self.yaw_controller = yaw_controller
 
 
@@ -21,17 +21,15 @@ class Controller(object):
         throttle = 0.0
         brake = 0.0
         steer = 0.0
+        msg_time = rospy.get_rostime()
 
-        msg_time = target_velocity.header.stamp.secs + 1E-9 * target_velocity.header.stamp.nsecs
-
-        # TODO: Use "last_msg_timestamp == None" instead
-        if self.is_first_message:
-            self.is_first_message = False
+        if self.last_msg_timestamp is None:
             self.last_msg_timestamp = msg_time
             return throttle, brake, steer
 
         delta_time = msg_time - self.last_msg_timestamp
-        if delta_time == 0:
+        delta_time_sec = delta_time.secs + 1.0E-9 * delta_time.nsecs
+        if delta_time_sec == 0:
             return throttle, brake, steer
 
         self.last_msg_timestamp = msg_time
@@ -39,20 +37,17 @@ class Controller(object):
         vel_diff = target_velocity.twist.linear.x - current_velocity.twist.linear.x
 
         # TODO: Limit values
-        # TODO: Return Nm for braking
         # TODO: Reset when dbw_enabled toggles (also is_first_message)
         if target_velocity.twist.linear.x < 0.5 and vel_diff < 0 and vel_diff > -0.5:
             brake = 1000
         elif vel_diff > 0:
-            throttle = self.throttle_pid.step(vel_diff, delta_time)
+            throttle = self.throttle_pid.step(vel_diff, delta_time_sec)
         else:
-            brake = self.brake_pid.step(-vel_diff, delta_time)
+            brake = self.brake_pid.step(-vel_diff, delta_time_sec)
 
-        #steer_linear = self.steer_pid.step(steer_diff, delta_time)
-        steer = self.yaw_controller.get_steering(target_velocity.twist.linear.x, target_velocity.twist.angular.z, current_velocity.twist.linear.x)
+        steer = 2 * self.yaw_controller.get_steering(target_velocity.twist.linear.x, target_velocity.twist.angular.z, current_velocity.twist.linear.x)
 
         #print(str(current_velocity.twist.linear.x) + ' / ' + str(target_velocity.twist.linear.x) + '   --   ' + str(target_velocity.twist.angular.z) + '  /  ' + str(steer))
-
         #print(str(vel_diff) + " / " + str(throttle) + " / " + str(brake))
 
         return throttle, brake, steer
