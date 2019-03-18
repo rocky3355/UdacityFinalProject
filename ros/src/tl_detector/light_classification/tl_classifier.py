@@ -2,10 +2,19 @@ import cv2
 import numpy as np
 from styx_msgs.msg import TrafficLight
 
+DETECTION_FILTER_SIZE = 3
+
 class TLClassifier(object):
     def __init__(self):
         self.create_blob_detector()
-        self.kernel = np.ones((5, 5), np.float32) / 25
+        self.kernel = np.ones((5, 5), np.float32) / 25#
+
+        self.detection_filter = []
+        for i in range(DETECTION_FILTER_SIZE):
+            self.detection_filter.append(TrafficLight.UNKNOWN)
+
+        self.detection_filter_idx = 0
+        self.detection_filter_current_result = TrafficLight.UNKNOWN
 
 
     def create_blob_detector(self):
@@ -28,7 +37,6 @@ class TLClassifier(object):
             self.detector = cv2.SimpleBlobDetector_create(params)
 
 
-    # TODO: Add some kind of mean filter?
     def get_classification(self, image):
         mask_red = cv2.inRange(image, (0, 0, 100), (50, 50, 255))
         mask_yellow = cv2.inRange(image, (20, 200, 200), (60, 255, 255))
@@ -40,32 +48,26 @@ class TLClassifier(object):
 
         keypoints = self.detector.detect(gray)
         if len(keypoints) > 0:
-            #print('RED')
-            return TrafficLight.RED
+            self.detection_filter_add(TrafficLight.RED)
+        else:
+            self.detection_filter_add(TrafficLight.UNKNOWN)
 
-        #print('GREEN or UNKNOWN')
-        return TrafficLight.UNKNOWN
+        self.detection_filter_evaluate()
+        return self.detection_filter_current_result
 
 
+    def detection_filter_add(self, value):
+        self.detection_filter[self.detection_filter_idx] = value
+        self.detection_filter_idx += 1
+        if self.detection_filter_idx == DETECTION_FILTER_SIZE:
+            self.detection_filter_idx = 0
 
-#mask_red = cv2.inRange(image, (0, 0, 100), (50, 50, 255))
-#mask_yellow = cv2.inRange(image, (20, 200, 200), (50, 255, 255))
 
-#masked_red = cv2.bitwise_and(image, image, mask=mask_red)
-#masked_yellow = cv2.bitwise_and(image, image, mask=mask_yellow)
+    def detection_filter_evaluate(self):
+        counter = 0
+        for detection in self.detection_filter:
+            if detection is not self.detection_filter_current_result:
+                counter += 1
 
-#blurred_red = cv2.filter2D(masked_red, -1, self.kernel)
-#blurred_yellow = cv2.filter2D(masked_yellow, -1, self.kernel)
-
-#gray_red = cv2.cvtColor(blurred_red, cv2.COLOR_BGR2GRAY)
-#gray_yellow = cv2.cvtColor(blurred_yellow, cv2.COLOR_BGR2GRAY)
-
-#keypoints_red = self.detector.detect(gray_red)
-#if len(keypoints_red) > 0:
-#    #print('RED')
-#    return TrafficLight.RED
-
-#keypoints_yellow = self.detector.detect(gray_yellow)
-#if len(keypoints_yellow) > 0:
-#    # print('YELLOW')
-#    return TrafficLight.YELLOW
+        if counter == DETECTION_FILTER_SIZE:
+            self.detection_filter_current_result = self.detection_filter[0]

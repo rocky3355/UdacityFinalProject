@@ -52,6 +52,8 @@ class WaypointUpdater(object):
     def waypoints_cb(self, msg):
         self.waypoints = msg.waypoints
         self.num_waypoints = len(self.waypoints)
+        for wp_idx in range(self.num_waypoints):
+            self.set_waypoint_velocity(wp_idx, DESIRED_VELOCITY)
 
 
     def velocity_cb(self, msg):
@@ -90,35 +92,41 @@ class WaypointUpdater(object):
     def traffic_cb(self, msg):
         light_wp_idx = msg.data
         if light_wp_idx < 0 or self.waypoints is None:
+           # print('GREEN!!!')
             self.update_wp_velocities = True
             return
 
-        #if not self.update_wp_velocities:
-        #    return
+        if not self.update_wp_velocities:
+            return
+
+        #print('RED!!!')
 
         print("Red light at: #" + str(light_wp_idx))
         self.update_wp_velocities = False
 
-        standstill_offset = 1
+        standstill_offset = 2
         standstill_wp_idx = light_wp_idx - standstill_offset
 
-        for i in range(standstill_offset):
+        for i in range(standstill_offset + 1):
             wp_idx = light_wp_idx - i
-            self.set_waypoint_velocity(wp_idx, 0)
+            self.set_waypoint_velocity(wp_idx, 0.0)
+            #print('Set #' + str(wp_idx) + ' to 0.0')
 
-        #print('Setting WP ' + str(standstill_wp_idx) + ' to 0')
-        #self.set_waypoint_velocity(standstill_wp_idx, 0)
+        velocity = self.velocity
 
-        steps = max(int(self.velocity) * 3, standstill_offset)
+        if velocity < 5.0:
+            velocity = 5.0
+
+        steps = int(velocity * 4.0)
         #print('Steps: ' + str(steps) + '  /  Velocity: ' + str(self.velocity))
-        vel_step = self.velocity / steps
+        vel_step = velocity / steps
 
         for i in range(steps):
-            wp_idx = (standstill_wp_idx - i) % self.num_waypoints
+            wp_idx = (standstill_wp_idx - i - 1) % self.num_waypoints
             wp_velocity = i * vel_step
             #wp_velocity = 0 if wp_velocity < 0 else wp_velocity
             self.set_waypoint_velocity(wp_idx, wp_velocity)
-            #print("Set #" + str(wp_idx) + " to " + str(wp_velocity))
+            #print('Set #' + str(wp_idx) + ' to ' + str(wp_velocity))
 
 
     def obstacle_cb(self, msg):
@@ -141,14 +149,6 @@ class WaypointUpdater(object):
         delta_z = pos1.z - pos2.z
         dist = delta_x * delta_x + delta_y * delta_y + delta_z * delta_z
         return dist
-
-    #def distance(self, waypoints, wp1, wp2):
-    #    dist = 0
-    #    dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2)
-    #    for i in range(wp1, wp2+1):
-    #        dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
-    #        wp1 = i
-    #    return dist
 
 
 if __name__ == '__main__':
