@@ -4,3 +4,4 @@ ros/src/.idea
 *.pyc
 logs/
 ros/.catkin_tools
+ros/src/tl_detector/light_classification/training_images
