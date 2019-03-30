@@ -1,7 +1,13 @@
+*.pyc
+*.exe
+*.pdb
+*.exe.config
 ros/build
 ros/devel
 ros/src/.idea
-*.pyc
 logs/
 ros/.catkin_tools
-ros/src/tl_detector/light_classification/training_images
+ros/src/tl_detector/light_classification/training/processed
+ros/src/tl_detector/light_classification/training/unused
+ros/src/tl_detector/light_classification/training/ImageCut/.vs
+ros/src/tl_detector/light_classification/training/ImageCut/ImageCut/obj

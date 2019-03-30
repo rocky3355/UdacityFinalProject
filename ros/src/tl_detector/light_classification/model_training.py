@@ -1,7 +1,7 @@
 import cv2
 import glob
 import keras
-import rospy
+#import rospy
 import yaml
 import scipy.misc
 from keras.utils import to_categorical
@@ -9,16 +9,16 @@ import tensorflow as tf
 from scipy import misc
 from keras.layers import *
 from keras.models import Sequential
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
+#from sensor_msgs.msg import Image
+#from cv_bridge import CvBridge
 
 
-TRAIN_MODEL = True
-NUMBER_OF_CLASSES = 3
+TRAIN_MODEL = False
+NUMBER_OF_CLASSES = 4
 MODEL_IMG_SIZE = (64, 64)
-MODEL_FILE_NAME = 'model.h5'
-IMAGES_DIR = 'TrafficLightTrainingReal'
-LABEL_TEXT_FILE = IMAGES_DIR + '/labels.txt'
+MODEL_FILE_NAME = 'training/model.h5'
+TRAIN_DIR = 'training/processed/'
+LABEL_TEXT_FILE = TRAIN_DIR + '/labels.txt'
 TRAFFIC_LIGHTS = ['Green', 'Yellow', 'Red', 'Unknown']
 
 
@@ -96,47 +96,20 @@ def load_model():
 
 
 def train_model(model):
-    with open("/home/qxw0266/Downloads/dataset_train_rgb/train.yaml", 'r') as stream:
-        try:
-            content = yaml.safe_load(stream)
-        except yaml.YAMLError as exc:
-            print(exc)
-            exit(1)
-
     images = []
     labels = []
-    label_texts = ['Green', 'Yellow', 'Red']
+    label_lines = None
 
-    for entry in content:
-        boxes = entry['boxes']
-        if boxes:
-            path = entry['path']
-            path = '/home/qxw0266/Downloads/dataset_train_rgb' + path[1:]
+    with open(LABEL_TEXT_FILE) as file:
+        label_lines = file.readlines()
 
-            for box in boxes:
-                label = box['label']
-                try:
-                    label_idx = label_texts.index(label)
-                except:
-                    continue
+    for line in label_lines:
+        labels.append(int(line))
 
-                x_min = int(box['x_min'])
-                x_max = int(box['x_max'])
-                y_min = int(box['y_min'])
-                y_max = int(box['y_max'])
-
-                if x_min >= x_max or y_min >= y_max:
-                    continue
-
-                x_min = 0 if x_min < 0 else x_min
-                y_min = 0 if y_min < 0 else y_min
-
-                full_img = misc.imread(path)[:, :, :3]
-                cropped_img = full_img[y_min:y_max, x_min:x_max, :3]
-                final_img = cv2.resize(cropped_img, MODEL_IMG_SIZE)
-                images.append(final_img)
-                labels.append(label_idx)
-                #misc.imsave('test.jpg', final_img)
+    img_files = glob.glob(TRAIN_DIR + 'images/*.jpg')
+    for img_file in img_files:
+        img = misc.imread(img_file)#[:, :, :3]
+        images.append(img)
 
     images = np.array(images)
     labels = np.array(to_categorical(labels, num_classes=NUMBER_OF_CLASSES))
@@ -185,7 +158,7 @@ def image_cb(msg):
     if max_prob < 0.95:
         traffic_light = TRAFFIC_LIGHTS[3]
 
-    print traffic_light
+    print(traffic_light)
 
 
 if TRAIN_MODEL:
