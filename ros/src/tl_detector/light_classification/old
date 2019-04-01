@@ -1,21 +1,25 @@
 import cv2
+import glob
 import keras
-import rospy
+#import rospy
+import yaml
+import scipy.misc
 from keras.utils import to_categorical
 import tensorflow as tf
 from scipy import misc
 from keras.layers import *
 from keras.models import Sequential
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
+#from sensor_msgs.msg import Image
+#from cv_bridge import CvBridge
 
 
+TRAIN_MODEL = False
 NUMBER_OF_CLASSES = 4
 MODEL_IMG_SIZE = (64, 64)
 MODEL_FILE_NAME = 'training/model.h5'
 TRAIN_DIR = 'training/processed/'
 LABEL_TEXT_FILE = TRAIN_DIR + '/labels.txt'
-TRAFFIC_LIGHTS = ['Unknown', 'Green', 'Yellow', 'Red']
+TRAFFIC_LIGHTS = ['Green', 'Yellow', 'Red', 'Unknown']
 
 
 def slide_window(img_shape, x_start_stop, y_start_stop, xy_window, xy_overlap):
@@ -58,11 +62,11 @@ def slide_window(img_shape, x_start_stop, y_start_stop, xy_window, xy_overlap):
 
 def create_search_windows(img_shape):
     overlap = (0.75, 0.75)
-    # near_windows = slide_window(img_shape, (None, None), (None, None), (70, 120), overlap)
-    # mid_windows = slide_window(img_shape, (None, None), (None, None), (35, 70), overlap)
-    # far_windows = slide_window(img_shape, (None, None), (None, None), (32, 50), overlap)
+    #near_windows = slide_window(img_shape, (None, None), (None, None), (70, 120), overlap)
+    #mid_windows = slide_window(img_shape, (None, None), (None, None), (35, 70), overlap)
+    #far_windows = slide_window(img_shape, (None, None), (None, None), (32, 50), overlap)
     w = slide_window(img_shape, (200, 600), (None, 400), (70, 120), overlap)
-    # windows = near_windows + mid_windows + far_windows
+    #windows = near_windows + mid_windows + far_windows
     return w
 
 
@@ -92,27 +96,60 @@ def load_model():
 
 
 def train_model(model):
+    dataset_path = 'C:/Users/Paschl/Downloads/dataset_train_rgb'
+    with open(dataset_path + '/train.yaml', 'r') as stream:
+        try:
+            content = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+            exit(1)
+
     images = []
     labels = []
-    img_files = []
-    label_lines = None
+    label_texts = ['Green', 'Yellow', 'Red']
+    counter = 0
+    #idx = 0
 
-    with open(LABEL_TEXT_FILE) as file:
-        label_lines = file.readlines()
+    for entry in content:
+        counter += 1
+        print(counter)
+        boxes = entry['boxes']
+        if boxes:
+            path = entry['path']
+            path = dataset_path + path[1:]
 
-    for line in label_lines:
-        line_parts = line.split(';')
-        labels.append(int(line_parts[0]))
-        img_files.append(line_parts[1].strip())
+            for box in boxes:
+                label = box['label']
+                try:
+                    label_idx = label_texts.index(label)
+                except:
+                    continue
 
-    for img_file in img_files:
-        img = misc.imread(img_file)  # [:, :, :3]
-        images.append(img)
+                x_min = int(box['x_min'])
+                x_max = int(box['x_max'])
+                y_min = int(box['y_min'])
+                y_max = int(box['y_max'])
+
+                if x_min >= x_max or y_min >= y_max:
+                    continue
+
+                x_min = 0 if x_min < 0 else x_min
+                y_min = 0 if y_min < 0 else y_min
+
+                full_img = misc.imread(path)[:, :, :3]
+                cropped_img = full_img[y_min:y_max, x_min:x_max, :3]
+                final_img = cv2.resize(cropped_img, MODEL_IMG_SIZE)
+
+                #misc.imsave('output/' + str(idx) + '.jpg', final_img)
+                #idx += 1
+
+                images.append(final_img)
+                labels.append(label_idx)
 
     images = np.array(images)
     labels = np.array(to_categorical(labels, num_classes=NUMBER_OF_CLASSES))
 
-    model.fit(images, labels, epochs=10, validation_split=0.2, shuffle=True)
+    model.fit(images, labels, epochs=5, validation_split=0.2, shuffle=True)
     model.save(MODEL_FILE_NAME)
 
 
@@ -124,10 +161,10 @@ def get_window_images(img):
         window_img = img[window[0][1]:window[1][1], window[0][0]:window[1][0]]
         window_img = cv2.resize(window_img, MODEL_IMG_SIZE)
         window_imgs.append(window_img)
-        # cv2.rectangle(img, window[0], window[1], (0, 0, 255), 6)
+        #cv2.rectangle(img, window[0], window[1], (0, 0, 255), 6)
 
-    # scipy.misc.imsave('test.jpg', img)
-    # exit(0)
+    #scipy.misc.imsave('test.jpg', img)
+    #exit(0)
     window_imgs = np.array(window_imgs)
     return window_imgs
 
@@ -142,7 +179,7 @@ def image_cb(msg):
         result = model.predict(window_images)
 
     traffic_light = None
-    # print result
+    #print result
 
     max_prob = 0
 
@@ -159,29 +196,28 @@ def image_cb(msg):
     print(traffic_light)
 
 
-TRAIN_MODEL = False
-
-
 if TRAIN_MODEL:
     model = create_model()
     train_model(model)
     exit(0)
 
+
 model = load_model()
 graph = tf.get_default_graph()
 
-bridge = CvBridge()
-img_shape = (800, 600)
-windows = create_search_windows(img_shape)
+#bridge = CvBridge()
+#img_shape = (800, 600)
+#windows = create_search_windows(img_shape)
 
-rospy.init_node('tl_training')
-subscriber = rospy.Subscriber('/image_color', Image, image_cb)
+#rospy.init_node('tl_training')
+#subscriber = rospy.Subscriber('/image_color', Image, image_cb)
 
-while True:
-    rospy.spin()
+img = misc.imread('test/883.jpg')
+img = cv2.resize(img, MODEL_IMG_SIZE)
+img = np.array([img])
+result = model.predict(img)
+print(result)
 
-#img = misc.imread('test/test2.jpg')
-#img = cv2.resize(img, MODEL_IMG_SIZE)
-#img = np.array([img])
-#result = model.predict(img)
-#print(result)
+
+#while True:
+#    rospy.spin()

@@ -4,12 +4,18 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Collections.Generic;
 using System.Drawing.Drawing2D;
+using Emgu.CV;
+using Emgu.CV.Structure;
+
+using CvImageType = Emgu.CV.Image<Emgu.CV.Structure.Rgb, System.Byte>;
 
 namespace ImageCut {
 
     public static class Program {
 
         private static int CUT_SIZE = 64;
+        private static int BOUNDING_BOX_STEP = 2;
+
         private static StreamWriter _labelWriter;
         private static List<BoundingBox> _boundingBoxes;
         private static string BASE_DIR = @"C:\Users\Paschl\Documents\GitHub\UdacityFinalProject\ros\src\tl_detector\light_classification\training\";
@@ -17,6 +23,13 @@ namespace ImageCut {
         private static string PROCESSED_DIR = BASE_DIR + "processed/";
 
         public static void Main(string[] args) {
+            //CvImageType cvImg = new Image<Rgb, Byte>((Bitmap)Image.FromFile(SOURCE_DIR + "images/image_0.jpg"));
+            //CvImageType cvImgNew = cvImg.SmoothGaussian(5);
+            //CvImageType cvImgNew = cvImg.Erode(1);
+            //CvImageType[] cvImgNew = cvImg * 1.1;
+            //cvImgNew.Save(BASE_DIR + "output.jpg");
+            //return;
+
             _boundingBoxes = CreateSplitBoxes();
             string[] imageFiles = Directory.GetFiles(SOURCE_DIR + "images", "*.jpg", SearchOption.TopDirectoryOnly);
             string labelFile = PROCESSED_DIR + "labels.txt";
@@ -28,18 +41,17 @@ namespace ImageCut {
                 string labelFileName = SOURCE_DIR + "labels/" + fileName + ".xml";
                 Image image = Image.FromFile(imageFile);
 
+                int cutStartIdx = 0;
                 BoundingBox bbox = null;
+
                 if (File.Exists(labelFileName)) {
                     Tuple<BoundingBox, string> label = ParseLabelFile(labelFileName);
                     bbox = label.Item1;
-                    _labelWriter.WriteLine(label.Item2);
                     Image img = CropImage(image, bbox);
-                    string imageName = PROCESSED_DIR + "images/" + imageIdx + "-0.jpg";
-                    img = ResizeImage(img, CUT_SIZE, CUT_SIZE);
-                    img.Save(imageName, ImageFormat.Jpeg);
+                    cutStartIdx = CreateAndSaveImageVariations(img, imageIdx, label.Item2);
                 }
 
-                SplitAndSaveImage(image, imageIdx, bbox);
+                SplitAndSaveImage(image, imageIdx, cutStartIdx, bbox);
                 imageIdx++;
             }
 
@@ -47,13 +59,39 @@ namespace ImageCut {
             _labelWriter.Close();
         }
 
+        private static void AddLabel(string label, string imagePath) {
+            _labelWriter.WriteLine(label + ";" + imagePath.Replace('\\', '/'));
+        }
+
+        private static int CreateAndSaveImageVariations(Image img, int imageIdx, string label) {
+            int subImageIdx = 0;
+            img = ResizeImage(img, CUT_SIZE, CUT_SIZE);
+            CvImageType cvImg = new Image<Rgb, Byte>((Bitmap)img);
+            CvImageType[] cvImgNew = {
+                cvImg,
+                cvImg.SmoothGaussian(5),
+                cvImg.SmoothGaussian(7),
+                cvImg.Erode(1),
+                cvImg.Erode(2)
+            };
+
+            foreach (CvImageType image in cvImgNew) {
+                string imagePath = PROCESSED_DIR + "images/" + imageIdx + "-" + subImageIdx + ".jpg";
+                AddLabel(label, imagePath);
+                image.Save(imagePath);
+                subImageIdx++;
+            }
+
+            return subImageIdx;
+        }
+
         private static List<BoundingBox> CreateSplitBoxes() {
             int width = 800;
             int height = 600;
             List<BoundingBox> bboxes = new List<BoundingBox>();
 
-            for (int y = 0; y <= height - CUT_SIZE; y += CUT_SIZE) {
-                for (int x = 0; x <= width - CUT_SIZE; x += CUT_SIZE) {
+            for (int y = 0; y <= height - CUT_SIZE; y += BOUNDING_BOX_STEP * CUT_SIZE) {
+                for (int x = 0; x <= width - CUT_SIZE; x += BOUNDING_BOX_STEP * CUT_SIZE) {
                     bboxes.Add(new BoundingBox(x, y, CUT_SIZE, CUT_SIZE));
                 }
             }
@@ -61,20 +99,19 @@ namespace ImageCut {
             return bboxes;
         }
 
-        private static void SplitAndSaveImage(Image image, int imageIdx, BoundingBox labelBbox) {
-            // 0 is for label image
-            int cutIdx = 1;
+        private static void SplitAndSaveImage(Image image, int imageIdx, int cutStartIdx, BoundingBox labelBbox) {
+            int cutIdx = cutStartIdx;
 
             foreach (BoundingBox bbox in _boundingBoxes) {
                 if (labelBbox != null && DoBoxesIntersect(bbox, labelBbox)) {
                     continue;
                 }
 
-                _labelWriter.WriteLine("0");
                 Image cutImage = CropImage(image, bbox);
+                string imagePath = PROCESSED_DIR + "images/" + imageIdx + "-" + cutIdx + ".jpg";
+                AddLabel("0", imagePath);
 
-                string imageName = PROCESSED_DIR + "images/" + imageIdx + "-" + cutIdx + ".jpg";
-                cutImage.Save(imageName, ImageFormat.Jpeg);
+                cutImage.Save(imagePath, ImageFormat.Jpeg);
                 cutIdx++;
             }
         }
