@@ -57,13 +57,12 @@ def slide_window(img_shape, x_start_stop, y_start_stop, xy_window, xy_overlap):
 
 
 def create_search_windows(img_shape):
-    overlap = (0.75, 0.75)
-    # near_windows = slide_window(img_shape, (None, None), (None, None), (70, 120), overlap)
-    # mid_windows = slide_window(img_shape, (None, None), (None, None), (35, 70), overlap)
-    # far_windows = slide_window(img_shape, (None, None), (None, None), (32, 50), overlap)
-    w = slide_window(img_shape, (200, 600), (None, 400), (70, 120), overlap)
-    # windows = near_windows + mid_windows + far_windows
-    return w
+    overlap = (0.5, 0.5)
+    near_windows = slide_window(img_shape, (100, 700), (0, 200), (50, 160), overlap)
+    mid_windows = slide_window(img_shape, (200, 600), (0, 200), (40, 120), overlap)
+    far_windows = slide_window(img_shape, (300, 500), (0, 200), (20, 60), overlap)
+    windows = near_windows + mid_windows + far_windows
+    return windows
 
 
 def create_model():
@@ -112,49 +111,59 @@ def train_model(model):
     images = np.array(images)
     labels = np.array(to_categorical(labels, num_classes=NUMBER_OF_CLASSES))
 
-    model.fit(images, labels, epochs=10, validation_split=0.2, shuffle=True)
+    model.fit(images, labels, epochs=20, validation_split=0.2, shuffle=True)
     model.save(MODEL_FILE_NAME)
 
 
 def get_window_images(img):
     global windows
 
+    #idx = 0
     window_imgs = []
     for window in windows:
         window_img = img[window[0][1]:window[1][1], window[0][0]:window[1][0]]
         window_img = cv2.resize(window_img, MODEL_IMG_SIZE)
+        #misc.imsave('boxes/' + str(idx) + '.jpg', window_img)
+        #idx += 1
         window_imgs.append(window_img)
-        # cv2.rectangle(img, window[0], window[1], (0, 0, 255), 6)
+        #cv2.rectangle(img, window[0], window[1], (0, 0, 255), 6)
 
-    # scipy.misc.imsave('test.jpg', img)
-    # exit(0)
+    #misc.imsave('test.jpg', img)
+    #exit(0)
     window_imgs = np.array(window_imgs)
     return window_imgs
 
+img_count = 0
 
 def image_cb(msg):
-    global graph
+    global graph, img_count
 
-    img = bridge.imgmsg_to_cv2(msg, "bgr8")
+    img_count += 1
+    if img_count % 5 != 0:
+        return
+
+    img = bridge.imgmsg_to_cv2(msg, "rgb8")
     window_images = get_window_images(img)
 
     with graph.as_default():
         result = model.predict(window_images)
 
     traffic_light = None
-    # print result
+    #print(result)
 
-    max_prob = 0
+   # max_prob = 0
 
     for window in result:
-        for idx in range(NUMBER_OF_CLASSES):
+        for idx in range(1, NUMBER_OF_CLASSES):
             prob = window[idx]
-            if prob > max_prob:
-                max_prob = prob
+            if prob > 0.6:
                 traffic_light = TRAFFIC_LIGHTS[idx]
+                break
+        if traffic_light is not None:
+            break
 
-    if max_prob < 0.95:
-        traffic_light = TRAFFIC_LIGHTS[3]
+    if traffic_light is None:
+        traffic_light = TRAFFIC_LIGHTS[0]
 
     print(traffic_light)
 
@@ -178,10 +187,10 @@ rospy.init_node('tl_training')
 subscriber = rospy.Subscriber('/image_color', Image, image_cb)
 
 while True:
-    rospy.spin()
+   rospy.spin()
 
-#img = misc.imread('test/test2.jpg')
-#img = cv2.resize(img, MODEL_IMG_SIZE)
-#img = np.array([img])
-#result = model.predict(img)
-#print(result)
+img = misc.imread('test/test9.jpg')[:,:,:3]
+img = cv2.resize(img, MODEL_IMG_SIZE)
+img = np.array([img])
+result = model.predict(img)
+print(result)
