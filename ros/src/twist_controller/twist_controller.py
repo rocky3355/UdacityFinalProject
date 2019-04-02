@@ -45,7 +45,7 @@ class Controller(object):
         elif vel_diff < -0.5:
             brake = self.brake_pid.step(-vel_diff, delta_time_sec)
 
-        steer = 1.5 * self.yaw_controller.get_steering(target_velocity.twist.linear.x, target_velocity.twist.angular.z, current_velocity.twist.linear.x)
+        steer = 2.0 * self.yaw_controller.get_steering(target_velocity.twist.linear.x, target_velocity.twist.angular.z, current_velocity.twist.linear.x)
 
         #print(str(current_velocity.twist.linear.x) + ' / ' + str(target_velocity.twist.linear.x) + '   --   ' + str(target_velocity.twist.angular.z) + '  /  ' + str(steer))
         print(str(vel_diff) + " / " + str(throttle) + " / " + str(brake))

@@ -8,8 +8,8 @@ ros/src/.idea
 logs/
 ros/.catkin_tools
 ros/src/tl_detector/light_classification/test
-ros/src/tl_detector/light_classification/training/processed
-ros/src/tl_detector/light_classification/training/unused
+ros/src/tl_detector/light_classification/training/real/processed
+ros/src/tl_detector/light_classification/training/simulation/processed
 ros/src/tl_detector/light_classification/training/ImageCut/.vs
 ros/src/tl_detector/light_classification/training/ImageCut/packages
 ros/src/tl_detector/light_classification/training/ImageCut/ImageCut/obj

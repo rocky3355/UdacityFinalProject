@@ -12,8 +12,8 @@ from cv_bridge import CvBridge
 
 NUMBER_OF_CLASSES = 4
 MODEL_IMG_SIZE = (64, 64)
-MODEL_FILE_NAME = 'training/model.h5'
-TRAIN_DIR = 'training/processed/'
+MODEL_FILE_NAME = 'training/simulation/model_simulation.h5'
+TRAIN_DIR = 'training/simulation/processed/'
 LABEL_TEXT_FILE = TRAIN_DIR + '/labels.txt'
 TRAFFIC_LIGHTS = ['Unknown', 'Green', 'Yellow', 'Red']
 
@@ -168,7 +168,7 @@ def image_cb(msg):
     print(traffic_light)
 
 
-TRAIN_MODEL = False
+TRAIN_MODEL = True
 
 
 if TRAIN_MODEL:

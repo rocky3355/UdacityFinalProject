@@ -15,7 +15,7 @@ def image_cb(img):
         return
 
     cv_image = bridge.imgmsg_to_cv2(img, "bgr8")
-    cv2.imwrite('training_images/image_' + str(saved_img_counter) + '.jpg', cv_image)
+    cv2.imwrite('/home/qxw0266/Udacity/UdacityFinalProject/ros/src/tl_detector/light_classification/training/simulation/source/image_' + str(saved_img_counter) + '.jpg', cv_image)
     saved_img_counter += 1
 
 

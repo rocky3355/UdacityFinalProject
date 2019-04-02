@@ -144,7 +144,7 @@ class TLDetector(object):
         return closest_wp_idx
 
 
-    def get_light_state(self, light):
+    def get_light_state(self):
         """Determines the current color of the traffic light
 
         Args:
@@ -158,7 +158,7 @@ class TLDetector(object):
             self.prev_light_loc = None
             return False
 
-        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "rgb8")
 
         #Get classification
         return self.light_classifier.get_classification(cv_image)
@@ -186,7 +186,6 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        light = None
 
         # List of positions that correspond to the line to stop in front of for a given intersection
         #stop_line_positions = self.config['stop_line_positions']
@@ -205,16 +204,16 @@ class TLDetector(object):
                 idx_diff = abs(stop_line_wp_idx - car_wp_idx)
                 if idx_diff < min_idx_diff:
                     min_idx_diff = idx_diff
-                    light = tr_light
                     closest_stop_line_wp_idx = stop_line_wp_idx
 
-        if light:
-            state = self.get_light_state(light)
+        if closest_stop_line_wp_idx > -1:
+            state = self.get_light_state()
             #print('State: ' + str(state) + "  /  Stopline: #" + str(closest_stop_line_wp_idx) + "  /  Car: #" + str(car_wp_idx))
             return closest_stop_line_wp_idx, state
 
         self.waypoints = None
         return -1, TrafficLight.UNKNOWN
+
 
 if __name__ == '__main__':
     try:
