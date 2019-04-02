@@ -1,0 +1,26 @@
+<annotation>
+	<folder>images</folder>
+	<filename>image_10.jpg</filename>
+	<path>C:\Users\Paschl\Documents\GitHub\UdacityFinalProject\ros\src\tl_detector\light_classification\training\simulation\source\images\image_10.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>800</width>
+		<height>600</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Red</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>482</xmin>
+			<ymin>574</ymin>
+			<xmax>489</xmax>
+			<ymax>590</ymax>
+		</bndbox>
+	</object>
+</annotation>
