@@ -18,53 +18,6 @@ LABEL_TEXT_FILE = TRAIN_DIR + '/labels.txt'
 TRAFFIC_LIGHTS = ['Unknown', 'Green', 'Yellow', 'Red']
 
 
-def slide_window(img_shape, x_start_stop, y_start_stop, xy_window, xy_overlap):
-    img_width = img_shape[0]
-    img_height = img_shape[1]
-
-    x_start = x_start_stop[0]
-    x_stop = x_start_stop[1]
-    y_start = y_start_stop[0]
-    y_stop = y_start_stop[1]
-
-    if x_start is None:
-        x_start = 0
-    if x_stop is None:
-        x_stop = img_width
-    if y_start is None:
-        y_start = 0
-    if y_stop is None:
-        y_stop = img_height
-
-    x_span = x_stop - x_start
-    y_span = y_stop - y_start
-
-    x_step = xy_window[0] * (1 - xy_overlap[0])
-    y_step = xy_window[1] * (1 - xy_overlap[1])
-
-    x_windows = np.int(x_span / x_step)
-    y_windows = np.int(y_span / y_step)
-
-    window_list = []
-    for y in range(y_windows):
-        for x in range(x_windows):
-            left_top = (np.int(x_start + x * x_step), np.int(y_start + y * y_step))
-            right_bottom = (np.int(left_top[0] + xy_window[0]), np.int(left_top[1] + xy_window[1]))
-            if right_bottom[0] <= img_width and right_bottom[1] <= img_height:
-                window_list.append((left_top, right_bottom))
-
-    return window_list
-
-
-def create_search_windows(img_shape):
-    overlap = (0.5, 0.5)
-    near_windows = slide_window(img_shape, (100, 700), (0, 200), (50, 160), overlap)
-    mid_windows = slide_window(img_shape, (200, 600), (0, 200), (40, 120), overlap)
-    far_windows = slide_window(img_shape, (300, 500), (0, 200), (20, 60), overlap)
-    windows = near_windows + mid_windows + far_windows
-    return windows
-
-
 def create_model():
     model = Sequential()
     model.add(Lambda(lambda x: (x / 255.0) - 0.5, input_shape=(64, 64, 3)))
@@ -115,23 +68,7 @@ def train_model(model):
     model.save(MODEL_FILE_NAME)
 
 
-def get_window_images(img):
-    global windows
 
-    #idx = 0
-    window_imgs = []
-    for window in windows:
-        window_img = img[window[0][1]:window[1][1], window[0][0]:window[1][0]]
-        window_img = cv2.resize(window_img, MODEL_IMG_SIZE)
-        #misc.imsave('boxes/' + str(idx) + '.jpg', window_img)
-        #idx += 1
-        window_imgs.append(window_img)
-        #cv2.rectangle(img, window[0], window[1], (0, 0, 255), 6)
-
-    #misc.imsave('test.jpg', img)
-    #exit(0)
-    window_imgs = np.array(window_imgs)
-    return window_imgs
 
 img_count = 0
 
