@@ -18,18 +18,11 @@ namespace ImageCut {
 
         private static StreamWriter _labelWriter;
         private static List<BoundingBox> _boundingBoxes;
-        private static string BASE_DIR = @"C:\Users\Paschl\Documents\GitHub\UdacityFinalProject\ros\src\tl_detector\light_classification\training\";
+        private static string BASE_DIR = @"C:\Users\Paschl\Documents\GitHub\UdacityFinalProject\ros\src\tl_detector\light_classification\training\simulation\";
         private static string SOURCE_DIR = BASE_DIR + "source/";
         private static string PROCESSED_DIR = BASE_DIR + "processed/";
 
         public static void Main(string[] args) {
-            //CvImageType cvImg = new Image<Rgb, Byte>((Bitmap)Image.FromFile(SOURCE_DIR + "images/image_0.jpg"));
-            //CvImageType cvImgNew = cvImg.SmoothGaussian(5);
-            //CvImageType cvImgNew = cvImg.Erode(1);
-            //CvImageType[] cvImgNew = cvImg * 1.1;
-            //cvImgNew.Save(BASE_DIR + "output.jpg");
-            //return;
-
             _boundingBoxes = CreateSplitBoxes();
             string[] imageFiles = Directory.GetFiles(SOURCE_DIR + "images", "*.jpg", SearchOption.TopDirectoryOnly);
             string labelFile = PROCESSED_DIR + "labels.txt";
@@ -66,13 +59,16 @@ namespace ImageCut {
         private static int CreateAndSaveImageVariations(Image img, int imageIdx, string label) {
             int subImageIdx = 0;
             img = ResizeImage(img, CUT_SIZE, CUT_SIZE);
+            
             CvImageType cvImg = new Image<Rgb, Byte>((Bitmap)img);
             CvImageType[] cvImgNew = {
                 cvImg,
                 cvImg.SmoothGaussian(5),
                 cvImg.SmoothGaussian(7),
                 cvImg.Erode(1),
-                cvImg.Erode(2)
+                cvImg.Erode(2),
+                cvImg.Mul(1.2),
+                cvImg.Mul(0.8)
             };
 
             foreach (CvImageType image in cvImgNew) {
