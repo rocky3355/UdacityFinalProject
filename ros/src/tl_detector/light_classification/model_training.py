@@ -1,18 +1,15 @@
 import cv2
 import keras
-import rospy
 from keras.utils import to_categorical
 import tensorflow as tf
 from scipy import misc
 from keras.layers import *
 from keras.models import Sequential
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
 
 
 NUMBER_OF_CLASSES = 4
 MODEL_IMG_SIZE = (64, 64)
-MODEL_FILE_NAME = 'training/simulation/model_simulation.h5'
+MODEL_FILE_NAME = 'training/real/model_real.h5'
 TRAIN_DIR = 'training/simulation/processed/'
 LABEL_TEXT_FILE = TRAIN_DIR + '/labels.txt'
 TRAFFIC_LIGHTS = ['Unknown', 'Green', 'Yellow', 'Red']
@@ -68,45 +65,7 @@ def train_model(model):
     model.save(MODEL_FILE_NAME)
 
 
-
-
-img_count = 0
-
-def image_cb(msg):
-    global graph, img_count
-
-    img_count += 1
-    if img_count % 5 != 0:
-        return
-
-    img = bridge.imgmsg_to_cv2(msg, "rgb8")
-    window_images = get_window_images(img)
-
-    with graph.as_default():
-        result = model.predict(window_images)
-
-    traffic_light = None
-    #print(result)
-
-   # max_prob = 0
-
-    for window in result:
-        for idx in range(1, NUMBER_OF_CLASSES):
-            prob = window[idx]
-            if prob > 0.6:
-                traffic_light = TRAFFIC_LIGHTS[idx]
-                break
-        if traffic_light is not None:
-            break
-
-    if traffic_light is None:
-        traffic_light = TRAFFIC_LIGHTS[0]
-
-    print(traffic_light)
-
-
-TRAIN_MODEL = True
-
+TRAIN_MODEL = False
 
 if TRAIN_MODEL:
     model = create_model()
@@ -116,17 +75,7 @@ if TRAIN_MODEL:
 model = load_model()
 graph = tf.get_default_graph()
 
-bridge = CvBridge()
-img_shape = (800, 600)
-windows = create_search_windows(img_shape)
-
-rospy.init_node('tl_training')
-subscriber = rospy.Subscriber('/image_color', Image, image_cb)
-
-while True:
-   rospy.spin()
-
-img = misc.imread('test/test9.jpg')[:,:,:3]
+img = misc.imread('test/test16.jpg')[:,:,:3]
 img = cv2.resize(img, MODEL_IMG_SIZE)
 img = np.array([img])
 result = model.predict(img)
