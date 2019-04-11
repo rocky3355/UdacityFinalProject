@@ -10,7 +10,7 @@ from keras.models import Sequential
 NUMBER_OF_CLASSES = 4
 MODEL_IMG_SIZE = (64, 64)
 MODEL_FILE_NAME = 'training/real/model_real.h5'
-TRAIN_DIR = 'training/simulation/processed/'
+TRAIN_DIR = 'training/real/processed/'
 LABEL_TEXT_FILE = TRAIN_DIR + '/labels.txt'
 TRAFFIC_LIGHTS = ['Unknown', 'Green', 'Yellow', 'Red']
 
@@ -75,7 +75,7 @@ if TRAIN_MODEL:
 model = load_model()
 graph = tf.get_default_graph()
 
-img = misc.imread('test/test16.jpg')[:,:,:3]
+img = misc.imread('output/1.jpg')
 img = cv2.resize(img, MODEL_IMG_SIZE)
 img = np.array([img])
 result = model.predict(img)

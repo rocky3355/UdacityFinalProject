@@ -23,6 +23,30 @@ namespace ImageCut {
         private static string PROCESSED_DIR = BASE_DIR + "processed/";
 
         public static void Main(string[] args) {
+            string destDir = "/home/qxw0266/Udacity/UdacityFinalProject/ros/src/tl_detector/light_classification/training/real/processed/images/";
+            Image img = Image.FromFile("/home/qxw0266/Udacity/UdacityFinalProject/ros/src/tl_detector/light_classification/output/8.jpg");
+            CvImageType cvImg = new Image<Rgb, Byte>((Bitmap)img);
+            CvImageType[] cvImgNew = {
+                cvImg,
+                cvImg.SmoothGaussian(5),
+                cvImg.SmoothGaussian(7),
+                cvImg.Erode(1),
+                cvImg.Erode(2),
+                cvImg.Mul(1.2),
+                cvImg.Mul(0.8)
+            };
+
+            int imageIdx = 32;
+            int subImageIdx = 0;
+            foreach (CvImageType image in cvImgNew)
+            {
+                string imagePath = destDir + "images/" + imageIdx + "-" + subImageIdx + ".jpg";
+                //AddLabel(label, imagePath);
+                image.Save(imagePath);
+                subImageIdx++;
+            }
+            return;
+            /*
             _boundingBoxes = CreateSplitBoxes();
             string[] imageFiles = Directory.GetFiles(SOURCE_DIR + "images", "*.jpg", SearchOption.TopDirectoryOnly);
             string labelFile = PROCESSED_DIR + "labels.txt";
@@ -50,6 +74,7 @@ namespace ImageCut {
 
             _labelWriter.Flush();
             _labelWriter.Close();
+            */           
         }
 
         private static void AddLabel(string label, string imagePath) {

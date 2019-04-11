@@ -328,3 +328,44 @@ class TLClassifier(object):
 classifier = TLClassifier()
 img = misc.imread('training/real/source/images/image_136.jpg')
 classification = classifier.get_classification(img)
+
+traffic_light = []
+
+if len(key_points) >= 2:
+    for idx, kp in enumerate(key_points):
+        traffic_light_kp = [kp]
+        for idx2, kp2 in enumerate(key_points):
+            if idx == idx2:
+                continue
+            if abs(kp.pt[0] - kp2.pt[0]) < 2:
+                distance_y = int(abs(kp.pt[1] - kp2.pt[1]))
+                if distance_y < 150:
+                    traffic_light_kp.append(kp2)
+                    break
+
+        if len(traffic_light_kp) == 2:
+            center_x = int((traffic_light_kp[0].pt[0] + traffic_light_kp[1].pt[0]) / 2)
+            if (center_x, distance_y) not in traffic_light:
+                traffic_light.append((center_x, distance_y))
+
+
+tl_centers = []
+traffic_lights = []
+
+if len(key_points) >= 2:
+    for idx, kp in enumerate(key_points):
+        traffic_light_kp = [kp]
+        for idx2, kp2 in enumerate(key_points):
+            if idx == idx2:
+                continue
+            if abs(kp.pt[0] - kp2.pt[0]) < 2:
+                distance_y = int(abs(kp.pt[1] - kp2.pt[1]))
+                if distance_y < 150:
+                    traffic_light_kp.append(kp2)
+                    break
+
+        if len(traffic_light_kp) == 2:
+            center_x = int((traffic_light_kp[0].pt[0] + traffic_light_kp[1].pt[0]) / 2)
+            if center_x not in tl_centers:
+                tl_centers.append(center_x)
+                traffic_lights.append((center_x, int(traffic_light_kp[0].pt[1]), int(traffic_light_kp[1].pt[1])))

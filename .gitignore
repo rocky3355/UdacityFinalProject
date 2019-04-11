@@ -13,4 +13,5 @@ ros/src/tl_detector/light_classification/training/ImageCut/packages
 ros/src/tl_detector/light_classification/training/ImageCut/ImageCut/obj
 ros/src/tl_detector/light_classification/training/ImageCut/ImageCut/bin
 ros/src/tl_detector/light_classification/output/
+ros/src/tl_detector/light_classification/unknown/
 ros/src/tl_detector (copy)/

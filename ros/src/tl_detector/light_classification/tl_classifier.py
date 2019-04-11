@@ -1,19 +1,16 @@
 import os
 import cv2
-import keras
 import rospy
+import math
 import numpy as np
-import tensorflow as tf
 from scipy import misc
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from styx_msgs.msg import TrafficLight
 
 
-SAVE_IMAGES = False
-IS_SIMULATION = False
 MODEL_IMG_SIZE = (64, 64)
-TRAFFIC_LIGHT_MIN_PROB = 0.6
+TRAFFIC_LIGHT_MIN_PROB = 0.4
 MODEL_FILE_NAME = 'training/real/model_real.h5'
 
 
@@ -25,12 +22,13 @@ class TLClassifier(object):
         if IS_SIMULATION:
             self.kernel /= 13.0
         else:
-            self.kernel /= 100.0
+            self.kernel /= 13.0
 
-        script_path = os.path.dirname(os.path.realpath(__file__))
-        model_path = os.path.join(script_path, MODEL_FILE_NAME)
-        self.model = keras.models.load_model(model_path)
-        self.graph = tf.get_default_graph()
+        if PERFORM_MODEL_EVALUATION:
+            script_path = os.path.dirname(os.path.realpath(__file__))
+            model_path = os.path.join(script_path, MODEL_FILE_NAME)
+            self.model = keras.models.load_model(model_path)
+            self.graph = tf.get_default_graph()
 
 
     def create_blob_detector(self):
@@ -80,12 +78,12 @@ class TLClassifier(object):
 
         image = cv2.filter2D(image, -1, self.kernel)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        if SAVE_IMAGES:
-            misc.imsave('gray.jpg', image)
+        if IS_TEST:
+            misc.imsave('sim_gray.jpg', image)
 
         key_points = self.detector.detect(image)
 
-        if SAVE_IMAGES:
+        if IS_TEST:
             for marker in key_points:
                 image = cv2.drawMarker(image, tuple(int(i) for i in marker.pt), color=(0, 0, 255))
             misc.imsave('sim_key_points.jpg', image)
@@ -178,7 +176,7 @@ class TLClassifier(object):
 
         window_img = image[window[0][1]:window[1][1], window[0][0]:window[1][0]]
         window_img = cv2.resize(window_img, MODEL_IMG_SIZE)
-        if SAVE_IMAGES:
+        if IS_TEST:
             misc.imsave('sim_model_input.jpg', window_img)
 
         with self.graph.as_default():
@@ -210,45 +208,72 @@ class TLClassifier(object):
 
         y_span = y_stop - y_start
         y_step = window_height * (1 - xy_overlap[1])
-        y_windows = np.int(y_span / y_step)
+        y_windows = np.int(math.ceil(y_span / y_step))
 
         window_list = []
+        left = x_center - half_window_width
+
         for y in range(y_windows):
-            left_top = (x_center - half_window_width, np.int(y_start + y * y_step))
+            left_top = (left, np.int(y_stop - y * y_step))
             right_bottom = (x_center + half_window_width, np.int(left_top[1] + window_height))
-            if left_top[0] >= 0 and left_top[0] >= 0 and right_bottom[0] <= img_width and right_bottom[1] <= img_height:
+
+            if left_top[1] < 0:
+                dy = -left_top[1]
+                left_top = (left_top[0], 0)
+                right_bottom = (right_bottom[0], right_bottom[1] + dy)
+
+            if left_top[0] >= 0 and left_top[1] >= 0 and right_bottom[0] <= img_width and right_bottom[1] <= img_height:
                 window_list.append((left_top, right_bottom))
 
         return window_list
 
 
-    def create_search_windows(self, traffic_light_x, img_width, img_height):
+    def create_search_windows(self, traffic_light, img_width, img_height):
         windows = []
-        overlap = (0.5, 0.5)
+        overlap = (0.9, 0.9)
 
-        for tlx in traffic_light_x:
-            for shift in range(-5, 5, 5):
-                near_windows = self.slide_window(img_width, img_height, tlx + shift, (None, None), (50, 160), overlap)
-                mid_windows = self.slide_window(img_width, img_height, tlx + shift, (None, None), (20, 80), overlap)
-                far_windows = self.slide_window(img_width, img_height, tlx + shift, (None, None), (20, 60), overlap)
-                windows += near_windows + mid_windows + far_windows
+        for tl in traffic_light:
+            if tl[1] <= 0:
+                continue
+
+            tl_width_green_red = tl[1]
+            tl_height_green_red = int(tl[1] * 3.5)
+            tl_width_yellow = int(tl[1] * 0.5)
+            tl_height_yellow = int(tl[1] * 1.5)
+
+            windows.append(self.slide_window(img_width, img_height, tl[0], (None, None), (tl_width_green_red, tl_height_green_red), overlap))
+            windows.append(self.slide_window(img_width, img_height, tl[0], (None, None), (tl_width_yellow, tl_height_yellow), overlap))
 
         return windows
 
 
     def get_window_images(self, image, windows):
-        # idx = 0
+        new_windows = []
         window_images = []
-        for window in windows:
-            window_image = image[window[0][1]:window[1][1], window[0][0]:window[1][0]]
-            window_image = cv2.resize(window_image, MODEL_IMG_SIZE)
-            window_images.append(window_image)
-            # cv2.rectangle(image, window[0], window[1], (0, 0, 255), 6)
 
-        # misc.imsave('test.jpg', image)
-        # exit(0)
-        window_images = np.array(window_images)
-        return window_images
+        for window_array in windows:
+            tl_images = []
+            for window in window_array:
+                if window[0][0] == window[1][0]:
+                    continue
+                window_image = image[window[0][1]:window[1][1], window[0][0]:window[1][0]]
+                window_image = cv2.resize(window_image, MODEL_IMG_SIZE)
+                tl_images.append(window_image)
+
+            max_brightness = 0
+            selected_img_idx = -1
+            for idx, img in enumerate(tl_images):
+                brightness = np.sum(cv2.mean(img))
+                if brightness > max_brightness:
+                    max_brightness = brightness
+                    selected_img_idx = idx
+
+            if selected_img_idx > -1:
+                window_images.append(tl_images[selected_img_idx])
+                new_windows.append(window_array[selected_img_idx])
+
+        #window_images = np.array(window_images)
+        return new_windows, window_images
 
 
     def create_blob_detector2(self):
@@ -258,7 +283,7 @@ class TLClassifier(object):
         params.filterByColor = False
         params.filterByConvexity = False
         params.filterByCircularity = True
-        params.minCircularity = 0.4
+        params.minCircularity = 0.2
         params.minArea = 30
         params.maxArea = 1500
 
@@ -281,6 +306,8 @@ class TLClassifier(object):
         else:
             print('UNKNOWN')
 
+    img_idx = 0
+    brightness_factor = 0.9
 
     def get_classification(self, image):
         traffic_light_detection = TrafficLight.UNKNOWN
@@ -298,103 +325,165 @@ class TLClassifier(object):
 
             processed_img = image[:img_height, :]
             # TODO: Evaluate image darkness and adjust brightness accordingly
-            processed_img = self.adjust_brightness(processed_img, -200)
-            if SAVE_IMAGES:
+            brightness_reduction = int(self.brightness_factor * np.sum(np.mean(processed_img)))
+            processed_img = self.adjust_brightness(processed_img, -brightness_reduction)
+            if IS_TEST:
                 misc.imsave('real_brightness.jpg', processed_img)
-            #processed_img = cv2.cvtColor(processed_img, cv2.COLOR_RGB2GRAY)
-            #if SAVE_IMAGES:
-            #    misc.imsave('real_gray.jpg', processed_img)
+            processed_img = cv2.cvtColor(processed_img, cv2.COLOR_RGB2GRAY)
+            if IS_TEST:
+                misc.imsave('real_gray.jpg', processed_img)
             #processed_img = 255 - processed_img
-            #mask_bright = cv2.inRange(processed_img, 220, 255)
+            #mask_bright = cv2.inRange(processed_img, 0, 100)
             #processed_img = cv2.bitwise_and(processed_img, mask_bright)
-            #if SAVE_IMAGES:
+            #processed_img = cv2.threshold(processed_img, 0, 50, cv2.THRESH_BINARY)[1]
+            #if IS_TEST:
             #    misc.imsave('real_filtered.jpg', processed_img)
             #processed_img = cv2.filter2D(processed_img, -1, self.kernel)
-            #if SAVE_IMAGES:
+            #if IS_TEST:
             #    misc.imsave('real_blurred.jpg', processed_img)
+
             detector2 = self.create_blob_detector2()
             key_points = detector2.detect(processed_img)
 
-            traffic_light_x = []
+            #processed_img = 255 - processed_img
+            #if IS_TEST:
+            #    misc.imsave('real_inverted.jpg', processed_img)
+            #key_points += detector2.detect(processed_img)
 
-            if len(key_points) >= 2:
-                for idx, kp in enumerate(key_points):
-                    traffic_light_kp = [kp]
-                    for idx2, kp2 in enumerate(key_points):
-                        if idx == idx2:
-                            continue
-                        if abs(kp.pt[0] - kp2.pt[0]) < 2:
-                            traffic_light_kp.append(kp2)
-                        if len(traffic_light_kp) == 2:
-                            break
+            traffic_lights = []
 
-                    if len(traffic_light_kp) == 2:
-                        traffic_light_x.append(int((traffic_light_kp[0].pt[0] + traffic_light_kp[1].pt[0]) / 2))
-                        traffic_light_kp = []
-                print('TF X: ' + str(traffic_light_x))
+            for idx, kp in enumerate(key_points):
+                min_y_distance = 9999
+                second_kp = None
+
+                for idx2, kp2 in enumerate(key_points):
+                    if idx == idx2:
+                        continue
+                    if abs(kp.pt[0] - kp2.pt[0]) < 4:
+                        distance_y = int(abs(kp.pt[1] - kp2.pt[1]))
+                        if distance_y < min_y_distance:
+                            min_y_distance = distance_y
+                            second_kp = kp2
+
+                if second_kp is not None:
+                    center_x = int((kp.pt[0] + second_kp.pt[0]) / 2)
+                    if (center_x, distance_y) not in traffic_lights:
+                        traffic_lights.append((center_x, min_y_distance))
+
+            #print(traffic_lights)
 
             window_images = None
-            if len(traffic_light_x) > 0:
-                windows = self.create_search_windows(traffic_light_x, img_width, img_height)
-                window_images = self.get_window_images(image, windows)
+            if len(traffic_lights) > 0:
+                windows = self.create_search_windows(traffic_lights, img_width, img_height)
+                windows, window_images = self.get_window_images(image, windows)
 
-            if SAVE_IMAGES:
+            if IS_TEST:
                 for marker in key_points:
                     image = cv2.drawMarker(image, tuple(int(i) for i in marker.pt), color=(0, 0, 255))
                 misc.imsave('real_key_points.jpg', image)
 
-                if window_images is not None:
-                    for idx, img in enumerate(window_images):
-                        misc.imsave('output/' + str(idx) + '.jpg', img)
+                if IS_TEST and PRINT_BOXES:
+                    if window_images is not None:
+                        for idx, img in enumerate(window_images):
+                            misc.imsave('output/' + str(idx) + '.jpg', img)
 
-            print('KP: ' + str(len(key_points)))
+            #print('KP: ' + str(len(key_points)))
 
-            prediction_idx = 0  # UNKNOWN
-            if window_images is not None:
-                with self.graph.as_default():
-                    prediction = self.model.predict(window_images)
+            if PERFORM_MODEL_EVALUATION:
+                prediction_idx = 0  # UNKNOWN
 
-                    for p in prediction:
-                        # TODO: Dont use hardcoded value for "3"
-                        max_prob = p[0]
-                        # Loop from 1 to 3
-                        for idx in range(1, 4):
-                            if p[idx] > max_prob:
-                                max_prob = p[idx]
-                                prediction_idx = idx
+                if window_images is not None and len(window_images) > 0:
+                    with self.graph.as_default():
+                        tl_predictions = []
+                        max_prob = 0
+                        prediction_window_idx = -1
+                        #prediction_tl_idx = -1
+
+                        #for tl_idx, tl_images in enumerate(window_images):
+                        #    if len(tl_images) == 0:
+                        #        continue
+
+                        prediction = self.model.predict(np.array(window_images))
+
+                        #probs = np.zeros(3)
+
+                        for window_idx, p in enumerate(prediction):
+                            # TODO: Dont use hardcoded value for "3"
+                            # Loop from 1 to 3
+
+                            for idx in range(1, 4):
+                                #probs[idx-1] += p[idx]
+                                if p[idx] > max_prob:
+                                    max_prob = p[idx]
+                                    prediction_idx = idx
+                                    #prediction_tl_idx = tl_idx
+                                    prediction_window_idx = window_idx
+                                #window_idx += 1
+
+                        #tl_predictions.append(probs)
+
+                        if max_prob < TRAFFIC_LIGHT_MIN_PROB:
+                            prediction_idx = 0
                         if prediction_idx > 0:
-                            break
+                            #self.brightness_factor = 0.9
+                            cv2.rectangle(image, windows[prediction_window_idx][0], windows[prediction_window_idx][1], (0, 0, 255), 2)
+                        else:
+                            self.brightness_factor -= 0.1
+                            if self.brightness_factor == 0.8:
+                                self.brightness_factor = 1.1
+                            if not IS_TEST and SAVE_UNKNOWN_IMAGES:
+                                misc.imsave('unknown/' + str(self.img_idx) + '.jpg', image)
+                                self.img_idx += 1
 
-                    traffic_light_detection = self.map_detected_index_to_traffic_light(prediction_idx)
+                        print(self.brightness_factor)
+                        traffic_light_detection = self.map_detected_index_to_traffic_light(prediction_idx)
 
-        self.printtl(prediction_idx)
-        print('-------------------------------------')
+                self.printtl(prediction_idx)
+                if not IS_TEST:
+                    image = bridge.cv2_to_imgmsg(image, "rgb8")
+                    img_publisher.publish(image)
+        #print('-------------------------------------')
 
         return traffic_light_detection
 
 
+
+IS_TEST = False
+PRINT_BOXES = True
+IS_SIMULATION = False
+SAVE_UNKNOWN_IMAGES = False
+PERFORM_MODEL_EVALUATION = True
+
+
+if PERFORM_MODEL_EVALUATION:
+    import keras
+    import tensorflow as tf
 
 img_count = 0
 
 def image_cb(msg):
     global img_count
     img_count += 1
-    #if img_count % 5 != 0:
-        #return
+    if img_count % 2 != 0:
+        return
 
     img = bridge.imgmsg_to_cv2(msg, "rgb8")
     classification = classifier.get_classification(img)
-    print(str(classification) + ': ' + str(img_count))
+    #print(str(classification) + ': ' + str(img_count))
+
 
 
 classifier = TLClassifier()
-#img = misc.imread('training/real/source/images/image_160.jpg')
-#classifier.get_classification(img)
-#exit(0)
+
+if IS_TEST:
+    img = misc.imread('test/test30.jpg')
+    classifier.get_classification(img)
+    exit(0)
 
 bridge = CvBridge()
 rospy.init_node('tl_detector_test')
 subscriber = rospy.Subscriber('/image_color', Image, image_cb)
+img_publisher = rospy.Publisher('/image_traffic_light', Image, queue_size=1)
 
 while True:
    rospy.spin()
