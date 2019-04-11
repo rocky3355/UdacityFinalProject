@@ -17,6 +17,12 @@ class Controller(object):
         self.yaw_controller = yaw_controller
 
 
+    def reset(self):
+        self.throttle_pid.reset()
+        self.brake_pid.reset()
+        self.last_msg_timestamp = None
+
+
     def control(self, current_velocity, target_velocity):
         throttle = 0.0
         brake = 0.0
@@ -37,7 +43,6 @@ class Controller(object):
         vel_diff = target_velocity.twist.linear.x - current_velocity.twist.linear.x
 
         # TODO: Limit values
-        # TODO: Reset when dbw_enabled toggles (also is_first_message)
         if current_velocity.twist.linear.x < 0.5 and target_velocity.twist.linear.x < 0.1:
             brake = 1000
         elif vel_diff > 0:

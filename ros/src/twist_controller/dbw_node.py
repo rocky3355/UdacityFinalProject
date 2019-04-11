@@ -56,12 +56,10 @@ class DBWNode(object):
         self.throttle_pub = rospy.Publisher('/vehicle/throttle_cmd', ThrottleCmd, queue_size=1)
         self.brake_pub = rospy.Publisher('/vehicle/brake_cmd', BrakeCmd, queue_size=1)
 
-        # TODO: Create `Controller` object
         min_speed = 0.0
         yaw_controller = YawController(wheel_base, steer_ratio, min_speed, max_lat_accel, max_steer_angle)
         self.controller = Controller(yaw_controller)
 
-        # TODO: Subscribe to all the topics you need to
         rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.velocity_cb)
         rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_cb)
@@ -94,11 +92,11 @@ class DBWNode(object):
             # if <dbw is enabled>:
             #   self.publish(throttle, brake, steer)
 
-            #TODO
-            #TODO: Reset PID controllers if dbw_enabled is false
-            #if self.dbw_enabled:
-            throttle, brake, steering = self.controller.control(self.velocity, self.twist)
-            self.publish(throttle, brake, steering)
+            if self.dbw_enabled:
+                throttle, brake, steering = self.controller.control(self.velocity, self.twist)
+                self.publish(throttle, brake, steering)
+            else:
+                self.controller.reset();
 
             rate.sleep()
 
