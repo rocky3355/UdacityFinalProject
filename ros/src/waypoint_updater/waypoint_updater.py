@@ -24,8 +24,8 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-DESIRED_VELOCITY = 15
-LOOKAHEAD_WPS = 50 # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 50
+DESIRED_VELOCITY_MS = 15
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -53,7 +53,7 @@ class WaypointUpdater(object):
         self.waypoints = msg.waypoints
         self.num_waypoints = len(self.waypoints)
         for wp_idx in range(self.num_waypoints):
-            self.set_waypoint_velocity(wp_idx, DESIRED_VELOCITY)
+            self.set_waypoint_velocity(wp_idx, DESIRED_VELOCITY_MS)
 
 
     def velocity_cb(self, msg):
@@ -69,7 +69,6 @@ class WaypointUpdater(object):
         prev_distance = sys.float_info.max
         start_idx = -1
 
-        # TODO: Start searching from last idx?
         for idx,wp in enumerate(self.waypoints):
             distance = self.distance_squared(wp.pose, pose)
             if distance < prev_distance:
@@ -83,7 +82,7 @@ class WaypointUpdater(object):
         for i in range(LOOKAHEAD_WPS):
             idx = (i + start_idx) % self.num_waypoints
             if self.update_wp_velocities:
-                self.set_waypoint_velocity(idx, DESIRED_VELOCITY)
+                self.set_waypoint_velocity(idx, DESIRED_VELOCITY_MS)
             lane.waypoints.append(self.waypoints[idx])
 
         self.final_waypoints_pub.publish(lane)
@@ -92,16 +91,13 @@ class WaypointUpdater(object):
     def traffic_cb(self, msg):
         light_wp_idx = msg.data
         if light_wp_idx < 0 or self.waypoints is None:
-           # print('GREEN!!!')
             self.update_wp_velocities = True
             return
 
         if not self.update_wp_velocities:
             return
 
-        #print('RED!!!')
-
-        print("Red light at: #" + str(light_wp_idx))
+        #print("Red light at: #" + str(light_wp_idx))
         self.update_wp_velocities = False
 
         standstill_offset = 2
@@ -124,7 +120,6 @@ class WaypointUpdater(object):
         for i in range(steps):
             wp_idx = (standstill_wp_idx - i - 1) % self.num_waypoints
             wp_velocity = i * vel_step
-            #wp_velocity = 0 if wp_velocity < 0 else wp_velocity
             self.set_waypoint_velocity(wp_idx, wp_velocity)
             #print('Set #' + str(wp_idx) + ' to ' + str(wp_velocity))
 

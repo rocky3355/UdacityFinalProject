@@ -36,7 +36,6 @@ class DBWNode(object):
     def __init__(self):
         rospy.init_node('dbw_node')
 
-        # TODO: Use these parameters?
         vehicle_mass = rospy.get_param('~vehicle_mass', 1736.35)
         fuel_capacity = rospy.get_param('~fuel_capacity', 13.5)
         brake_deadband = rospy.get_param('~brake_deadband', .1)
@@ -96,7 +95,7 @@ class DBWNode(object):
                 throttle, brake, steering = self.controller.control(self.velocity, self.twist)
                 self.publish(throttle, brake, steering)
             else:
-                self.controller.reset();
+                self.controller.reset()
 
             rate.sleep()
 

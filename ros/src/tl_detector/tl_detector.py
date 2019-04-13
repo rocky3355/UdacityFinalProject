@@ -7,7 +7,8 @@ from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from light_classification.tl_classifier import TLClassifier
+from light_classification.tl_classifier_real import TLClassifierReal
+from light_classification.tl_classifier_simulation import TLClassifierSimulation
 import tf
 import yaml
 
@@ -46,8 +47,12 @@ class TLDetector(object):
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
         self.listener = tf.TransformListener()
+
+        if self.config['is_site']:
+            self.light_classifier = TLClassifierReal()
+        else:
+            self.light_classifier = TLClassifierSimulation()
 
         self.state = TrafficLight.UNKNOWN
         self.last_state = TrafficLight.UNKNOWN

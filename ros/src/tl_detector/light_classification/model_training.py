@@ -9,9 +9,9 @@ from keras.models import Sequential
 
 NUMBER_OF_CLASSES = 4
 MODEL_IMG_SIZE = (64, 64)
-MODEL_FILE_NAME = 'training/real/model_real.h5'
 TRAIN_DIR = 'training/real/processed/'
 LABEL_TEXT_FILE = TRAIN_DIR + '/labels.txt'
+MODEL_FILE_NAME = 'training/real/model_real.h5'
 TRAFFIC_LIGHTS = ['Unknown', 'Green', 'Yellow', 'Red']
 
 
@@ -30,7 +30,6 @@ def create_model():
     model.add(Dense(50))
     model.add(Dense(10))
     model.add(Dense(NUMBER_OF_CLASSES))
-    #model.add(Activation('softmax'))
     model.compile(optimizer='adam', loss='mse')
     return model
 
@@ -44,7 +43,6 @@ def train_model(model):
     images = []
     labels = []
     img_files = []
-    label_lines = None
 
     with open(LABEL_TEXT_FILE) as file:
         label_lines = file.readlines()
