@@ -1,5 +1,6 @@
 # System Integration Project
 # TODO: ImageCut von Windows PC updaten
+# TODO: Explain waypoint updater?
 
 The goal of this project was to incorporate several of the course's topics into one single project. A car will follow given line of points that are already available for the track. Gas, brake and steering have to be controlled accordingly in order to keep the car on the track. Camera images have to be used to detect traffic lights and their state. Depending on the state, the car has to come to a stop at the corresponding stop line (the positions of all stop lines on the track are known) and then start driving again, as soon as the traffic light switches to green.
 
@@ -51,6 +52,18 @@ To collect data for training the model, a small ROS subscriber was implemented, 
 ![](ros/src/tl_detector/light_classification/training/real/processed/images/0-15.jpg)
 ![](ros/src/tl_detector/light_classification/training/real/processed/images/0-18.jpg)
 
+### 2.2 Running in realtime
+As running a sliding window search across the whole image is not feasible to be run in realtime, a different approach has been chosen:
 
+- Preprocess image
+- Perform a simple blob detection to get keypoints (i.e. the dark spots of a traffic light)
+- Search for keypoints that have a very small horizontal deviation
+    - Simulation: Find 3 keypoints
+    - Real: Find 2 keypoints
+- For each set of "connected" keypoints: Calculate the traffic light size by multiplying the vertical distance of the keypoints by constant factors
+- Perform object detection by using the trained model
+    - Simulation: There will be no other dark spots, the calculated rectangle can be directly given to the model
+    - Real: A window will be slided vertically and the brightest one will be taken as input for the model
 
+In detail, the 
 
