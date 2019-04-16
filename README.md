@@ -53,7 +53,7 @@ To collect data for training the model, a small ROS subscriber was implemented, 
 ![](ros/src/tl_detector/light_classification/training/real/processed/images/0-15.jpg)
 ![](ros/src/tl_detector/light_classification/training/real/processed/images/0-18.jpg)
 
-### 3.2 Running in realtime
+### 3.2 The detection algorithm
 As running a sliding window search across the whole image is not feasible to be run in realtime, a different approach has been chosen:
 
 - Preprocess image
