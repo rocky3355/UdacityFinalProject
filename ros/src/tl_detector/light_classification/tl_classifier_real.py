@@ -91,7 +91,7 @@ class TLClassifierReal(object):
             image_markers = np.copy(image)
             for marker in key_points:
                 image_markers = cv2.drawMarker(image_markers, tuple(int(i) for i in marker.pt), color=(0, 0, 255))
-            misc.imsave('sim_key_points.jpg', image_markers)
+            misc.imsave('real_key_points.jpg', image_markers)
 
         return key_points
 
