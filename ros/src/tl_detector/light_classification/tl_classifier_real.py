@@ -8,7 +8,7 @@ from scipy import misc
 from styx_msgs.msg import TrafficLight
 
 
-IS_TEST = True
+IS_TEST = False
 PRINT_BOXES = True
 SAVE_UNKNOWN_IMAGES = False
 PUBLISH_TL_DETECTION_IMG = True
@@ -148,44 +148,53 @@ class TLClassifierReal(object):
             if tl[1] <= 0:
                 continue
 
-            tl_width_green_red = tl[1]
-            tl_height_green_red = int(tl[1] * 3.5)
-            tl_width_yellow = int(tl[1] * 0.5)
-            tl_height_yellow = int(tl[1] * 1.5)
+            center_x = tl[0]
+            center_y = tl[1]
+            distance_y = tl[2]
 
-            windows.append(self.slide_window(img_width, img_height, tl[0], (None, None), (tl_width_green_red, tl_height_green_red), overlap))
-            windows.append(self.slide_window(img_width, img_height, tl[0], (None, None), (tl_width_yellow, tl_height_yellow), overlap))
+            tl_width_green_red = distance_y
+            #tl_height_green_red = int(distance_y * 3.5)
+            tl_width_yellow = int(distance_y * 0.5)
+            #tl_height_yellow = int(distance_y * 1.5)
+
+            # RED
+            top_left = (center_x - tl_width_green_red / 2, center_y - 2 * distance_y)
+            bottom_right = (top_left[0] + tl_width_green_red, int(center_y + distance_y * 1.3))
+
+            if top_left[0] > 0 and top_left[1] > 0 and bottom_right[0] < img_width and bottom_right[1] < img_height:
+                windows.append((top_left, bottom_right))
+
+            # GREEN
+            top_left = (center_x - tl_width_green_red / 2, int(center_y - distance_y * 1.3))
+            bottom_right = (top_left[0] + tl_width_green_red, int(center_y + 2 * distance_y))
+
+            if top_left[0] > 0 and top_left[1] > 0 and bottom_right[0] < img_width and bottom_right[1] < img_height:
+                windows.append((top_left, bottom_right))
+
+            # YELLOW
+            top_left = (center_x - tl_width_yellow / 2, int(center_y - distance_y * 0.72))
+            bottom_right = (top_left[0] + tl_width_yellow, int(center_y + distance_y * 0.9))
+
+            if top_left[0] > 0 and top_left[1] > 0 and bottom_right[0] < img_width and bottom_right[1] < img_height:
+                windows.append((top_left, bottom_right))
+
+            #windows.append(self.slide_window(img_width, img_height, tl[0], (None, None), (tl_width_green_red, tl_height_green_red), overlap))
+            #windows.append(self.slide_window(img_width, img_height, tl[0], (None, None), (tl_width_yellow, tl_height_yellow), overlap))
 
         return windows
 
 
     def get_window_images(self, image, windows):
-        new_windows = []
         window_images = []
 
-        for window_array in windows:
-            tl_images = []
-            for window in window_array:
-                if window[0][0] == window[1][0]:
-                    continue
-                window_image = image[window[0][1]:window[1][1], window[0][0]:window[1][0]]
-                window_image = cv2.resize(window_image, MODEL_IMG_SIZE)
-                tl_images.append(window_image)
+        for window in windows:
+            if window[0][0] == window[1][0]:
+                continue
+            window_image = image[window[0][1]:window[1][1], window[0][0]:window[1][0]]
+            window_image = cv2.resize(window_image, MODEL_IMG_SIZE)
+            window_images.append(window_image)
 
-            max_brightness = 0
-            selected_img_idx = -1
-
-            for idx, img in enumerate(tl_images):
-                brightness = np.sum(cv2.mean(img))
-                if brightness > max_brightness:
-                    max_brightness = brightness
-                    selected_img_idx = idx
-
-            if selected_img_idx > -1:
-                window_images.append(tl_images[selected_img_idx])
-                new_windows.append(window_array[selected_img_idx])
-
-        return new_windows, window_images
+        return window_images
 
 
     def get_traffic_lights(self, key_points):
@@ -206,8 +215,9 @@ class TLClassifierReal(object):
 
             if min_y_distance > 10 and second_kp is not None:
                 center_x = int((kp.pt[0] + second_kp.pt[0]) / 2)
-                if (center_x, min_y_distance) not in traffic_lights:
-                    traffic_lights.append((center_x, min_y_distance))
+                center_y = int((kp.pt[1] + second_kp.pt[1]) / 2)
+                if (center_x, center_y, min_y_distance) not in traffic_lights:
+                    traffic_lights.append((center_x, center_y, min_y_distance))
 
         return traffic_lights
 
@@ -217,7 +227,7 @@ class TLClassifierReal(object):
             return None
 
         windows = self.create_search_windows(traffic_lights, img_width, img_height)
-        windows, window_images = self.get_window_images(image, windows)
+        window_images = self.get_window_images(image, windows)
 
         if IS_TEST and PRINT_BOXES:
             if window_images is not None:
@@ -280,7 +290,7 @@ class TLClassifierReal(object):
         key_points = self.perform_blob_detection(image, processed_img)
         traffic_lights = self.get_traffic_lights(key_points)
         #print('KP: ' + str(len(key_points)))
-        print(traffic_lights)
+        #print(traffic_lights)
 
         windows, window_images = self.create_model_input_images(image, img_width, img_height, traffic_lights)
 
@@ -317,7 +327,7 @@ def image_cb(msg):
 classifier = TLClassifierReal()
 
 if IS_TEST:
-    img = misc.imread('training/real/source/images/image_0.jpg')
+    img = misc.imread('training/real/source/images/image_139.jpg')
     classifier.get_classification(img)
     exit(0)
 
