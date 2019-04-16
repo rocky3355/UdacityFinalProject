@@ -47,6 +47,9 @@ class DBWNode(object):
         max_lat_accel = rospy.get_param('~max_lat_accel', 3.)
         max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
 
+        # This will result in about 2000 Nm, which is way too high
+        #decel_torque_limit = vehicle_mass * wheel_radius * -decel_limit
+
         self.twist = TwistStamped()
         self.velocity = TwistStamped()
         self.dbw_enabled = False

@@ -6,7 +6,7 @@ import tensorflow as tf
 from scipy import misc
 from styx_msgs.msg import TrafficLight
 
-IS_TEST = True
+IS_TEST = False
 MODEL_IMG_SIZE = (64, 64)
 TRAFFIC_LIGHT_MIN_PROB = 0.5
 MODEL_FILE_NAME = 'training/simulation/model_simulation.h5'
@@ -99,7 +99,6 @@ class TLClassifierSimulation(object):
         return height
 
 
-    #TODO: Rename, names too similar
     def calc_traffic_light_center_and_height(self, key_points):
         center_x = 0
         center_y = 0
@@ -163,6 +162,17 @@ class TLClassifierSimulation(object):
         return TrafficLight.UNKNOWN
 
 
+    def print_tl_detection(self, prediction_idx):
+        if prediction_idx == 1:
+            print('GREEN')
+        elif prediction_idx == 2:
+            print('YELLOW')
+        elif prediction_idx == 3:
+            print('RED')
+        else:
+            print('UNKNOWN')
+
+
     def perform_object_detection(self, image, window):
         if window is None:
             return TrafficLight.UNKNOWN
@@ -184,6 +194,7 @@ class TLClassifierSimulation(object):
                 max_prob = prob
                 detected_idx = idx
 
+        #self.print_tl_detection(detected_idx)
         traffic_light_detection = self.map_detected_index_to_traffic_light(detected_idx)
         return traffic_light_detection
 
@@ -201,7 +212,9 @@ class TLClassifierSimulation(object):
         return traffic_light_detection
 
 
-if IS_TEST:
-    classifier = TLClassifierSimulation()
-    img = misc.imread('training/simulation/source/images/image_0.jpg')
-    classifier.get_classification(img)
+# Test code
+
+#if IS_TEST:
+#    classifier = TLClassifierSimulation()
+#    img = misc.imread('training/simulation/source/images/image_0.jpg')
+#    classifier.get_classification(img)

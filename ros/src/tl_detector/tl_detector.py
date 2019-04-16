@@ -50,6 +50,8 @@ class TLDetector(object):
         self.listener = tf.TransformListener()
 
         if self.config['is_site']:
+            global STATE_COUNT_THRESHOLD
+            STATE_COUNT_THRESHOLD = 5
             self.light_classifier = TLClassifierReal()
         else:
             self.light_classifier = TLClassifierSimulation()
