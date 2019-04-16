@@ -62,21 +62,28 @@ As running a sliding window search across the whole image is not feasible to be 
     - Real: Find 2 keypoints
 - For each set of "connected" keypoints: Calculate the traffic light size by multiplying the vertical distance of the keypoints by constant factors
 - Perform object detection by using the trained model
-    - Simulation: There will be no other dark spots, the calculated rectangle can be directly given to the model
+    - Simulation: There will be no other occurence of three dark spots in a column, the calculated rectangle can be directly given to the model
     - Real: A window will be slided vertically and the brightest one will be taken as input for the model
 
 #### 2.2.1 Image preprocessing
 For the real scenario, only the upper half of the image is taken, no traffic light will ever occur in the lower part of the image. The camera of the simulated car is mounted differently, thus we need to take the whole image there. Then, the image brightness gets lowered to strenghten the dark spots. For the simulator, the brightness will always be reduced by a fixed amount. For the real scenario, a variable amount will be deducted, depending on the average image brightness and some other factors. The simulator algorithm will now apply a Gauß filter to smoothen the image (this leads to better performance within the simulator only). As a last step, the image is being converted to grayscale, as the blob detector
-expects this format as input. Below you can see example image from both real (left) and simulator (right) scenario after applying the described steps (top to bottom: cutting, grayscale).
+expects this format as input. Below you can see example images from both the real and simulator scenario after applying the described steps.
 
 ![](ros/src/tl_detector/light_classification/training/real/source/images/image_0.jpg)
-![](ros/src/tl_detector/light_classification/training/simulation/source/images/image_0.jpg)
-
 ![](ros/src/tl_detector/light_classification/example_images/real_brightness.jpg)
-![](ros/src/tl_detector/light_classification/example_images/sim_brightness.jpg)
-
 ![](ros/src/tl_detector/light_classification/example_images/real_gray.jpg)
+
+![](ros/src/tl_detector/light_classification/training/simulation/source/images/image_0.jpg)
+![](ros/src/tl_detector/light_classification/example_images/sim_brightness.jpg)
 ![](ros/src/tl_detector/light_classification/example_images/sim_gray.jpg)
 
 #### 2.2 Blob detection
-The OpenCV simple blob detector is being applied to find out the dark spots in the image. 
+The OpenCV simple blob detector is being applied to find out the dark spots in the image. This helps to narrow down the possible locations of traffic lights. For both the real and simulation scenario, different parameters for the blob detector have been used. The simulation detector, for example, expects nearly circular blobs, while the real detector accepts almost arbitrary shapes. Below you can find two example images for the blob (i.e. keypoints) detection (blue crosses).
+
+![](ros/src/tl_detector/light_classification/example_images/real_key_points.jpg)
+![](ros/src/tl_detector/light_classification/example_images/sim_key_points.jpg)
+
+
+
+
+
