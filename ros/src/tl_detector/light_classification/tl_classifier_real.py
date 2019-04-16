@@ -317,7 +317,7 @@ def image_cb(msg):
 classifier = TLClassifierReal()
 
 if IS_TEST:
-    img = misc.imread('test/test1.jpg')
+    img = misc.imread('training/real/source/images/image_0.jpg')
     classifier.get_classification(img)
     exit(0)
 

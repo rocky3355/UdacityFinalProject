@@ -6,7 +6,7 @@ import tensorflow as tf
 from scipy import misc
 from styx_msgs.msg import TrafficLight
 
-IS_TEST = False
+IS_TEST = True
 MODEL_IMG_SIZE = (64, 64)
 TRAFFIC_LIGHT_MIN_PROB = 0.5
 MODEL_FILE_NAME = 'training/simulation/model_simulation.h5'
@@ -68,6 +68,9 @@ class TLClassifierSimulation(object):
 
     def perform_blob_detection(self, image):
         image = self.adjust_brightness(image, 40)
+        if IS_TEST:
+            misc.imsave('sim_brightness.jpg', image)
+
         image = cv2.filter2D(image, -1, self.kernel)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         if IS_TEST:
@@ -196,3 +199,9 @@ class TLClassifierSimulation(object):
                 traffic_light_detection = self.perform_object_detection(image, window)
 
         return traffic_light_detection
+
+
+if IS_TEST:
+    classifier = TLClassifierSimulation()
+    img = misc.imread('training/simulation/source/images/image_0.jpg')
+    classifier.get_classification(img)
