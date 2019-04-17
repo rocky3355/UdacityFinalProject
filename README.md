@@ -71,18 +71,22 @@ The details of the algorithm will be explained in the subsequent chapters.
 #### 3.2.1 Image preprocessing
 For the real scenario, only the upper half of the image is taken, no traffic light will ever occur in the lower part of the image. The camera of the simulated car is mounted differently, thus the whole image needs to be taken there. Then, the image brightness gets changed to either strenghten or weaken the dark spots. For the simulation, the brightness will always be increased by a fixed amount to filter out dark spots like branches of trees. For the real scenario, a variable amount will be deducted, depending on the average image brightness and some other factors. The simulation algorithm will now apply a Gauß filter to smoothen the image (this leads to better performance within the simulator only). As a last step, the image is being converted to grayscale, as the blob detector expects this format as input. Below you can see example images from both the real and simulator scenario after applying the described steps.
 
+Input image
 ![](ros/src/tl_detector/light_classification/training/real/source/images/image_0.jpg)
-![](ros/src/tl_detector/light_classification/example_images/real_brightness.jpg)
-![](ros/src/tl_detector/light_classification/example_images/real_gray.jpg)
 
-![](ros/src/tl_detector/light_classification/training/simulation/source/images/image_0.jpg)
-![](ros/src/tl_detector/light_classification/example_images/sim_brightness.jpg)
-![](ros/src/tl_detector/light_classification/example_images/sim_gray.jpg)
+Cutting and darkening
+![](ros/src/tl_detector/light_classification/example_images/real_brightness.jpg)
+
+Converting to grayscale
+![](ros/src/tl_detector/light_classification/example_images/real_gray.jpg)
 
 #### 3.2.2 Blob detection
 The OpenCV simple blob detector is being applied to find out the dark spots in the image. This helps to narrow down the possible locations of traffic lights. For both the real and simulation scenario, different parameters for the blob detector have been used. The simulation detector, for example, expects nearly circular blobs, while the real detector accepts almost arbitrary shapes. Below you can find two example images for the blob (i.e. keypoints) detection (blue crosses).
 
+Blob detection executed on a real image
 ![](ros/src/tl_detector/light_classification/example_images/real_key_points.jpg)
+
+Blob detection executed on a simulation image
 ![](ros/src/tl_detector/light_classification/example_images/sim_key_points.jpg)
 
 #### 3.2.3 Filtering out possible traffic lights
