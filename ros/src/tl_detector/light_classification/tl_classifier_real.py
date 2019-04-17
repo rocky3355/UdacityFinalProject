@@ -254,15 +254,26 @@ class TLClassifierReal(object):
         return windows, window_images
 
 
-    def print_tl_detection(self, prediction_idx):
+    def get_tl_detection_as_string(self, prediction_idx):
         if prediction_idx == 1:
-            print('GREEN')
+            return 'Green'
         elif prediction_idx == 2:
-            print('YELLOW')
+            return 'Yellow'
         elif prediction_idx == 3:
-            print('RED')
-        else:
-            print('UNKNOWN')
+            return 'Red'
+        return 'Unknown'
+
+
+    def label_img(self, image, window, prediction_idx):
+        lineType = 2
+        fontScale = 0.7
+        fontColor = (0, 0, 0)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        text = self.get_tl_detection_as_string(prediction_idx)
+        bottomLeftCornerOfText = (window[0][0], window[0][1] - 15)
+
+        cv2.rectangle(image, window[0], window[1], (0, 0, 255), 2)
+        cv2.putText(image, text, bottomLeftCornerOfText, font, fontScale, fontColor, lineType)
 
 
     def perform_object_detection(self, image, windows, window_images):
@@ -283,16 +294,14 @@ class TLClassifierReal(object):
             prediction_idx = 0
         if prediction_idx > 0:
             if not IS_TEST and PUBLISH_TL_DETECTION_IMG:
-                cv2.rectangle(image, windows[prediction_window_idx][0], windows[prediction_window_idx][1], (0, 0, 255), 2)
+                self.label_img(image, windows[prediction_window_idx], prediction_idx)
         else:
-            #self.brightness_factor -= BRIGHTNESS_STEP
-            #if self.brightness_factor < MIN_BRIGHTNESS:
-            #    self.brightness_factor = MAX_BRIGHTNESS
             if not IS_TEST and SAVE_UNKNOWN_IMAGES:
                 misc.imsave('unknown/' + str(self.img_idx) + '.jpg', image)
                 self.img_idx += 1
 
-        #self.print_tl_detection(prediction_idx)
+        #print(self.get_tl_detection_as_string(prediction_idx))
+
         traffic_light_detection = self.map_detected_index_to_traffic_light(prediction_idx)
         return traffic_light_detection
 
@@ -346,7 +355,6 @@ if PUBLISH_TL_DETECTION_IMG:
 #    classifier.get_classification(img)
 #    exit(0)
 
-#bridge = CvBridge()
 #rospy.init_node('tl_detector_test')
 #subscriber = rospy.Subscriber('/image_color', Image, image_cb)
 
