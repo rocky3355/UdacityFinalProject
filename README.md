@@ -98,3 +98,5 @@ As already mentioned, there is only one defined rectangle for a traffic light in
 ![](ros/src/tl_detector/light_classification/example_images/model_input/0.jpg)
 ![](ros/src/tl_detector/light_classification/example_images/model_input/1.jpg)
 ![](ros/src/tl_detector/light_classification/example_images/model_input/2.jpg)
+
+![](ros/src/tl_detector/light_classification/example_videos/traffic_light.avi)
