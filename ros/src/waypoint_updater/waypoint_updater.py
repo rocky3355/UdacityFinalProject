@@ -2,6 +2,7 @@
 
 import sys
 import rospy
+import numpy as np
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 from geometry_msgs.msg import TwistStamped
@@ -25,7 +26,6 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 50
-DESIRED_VELOCITY_MS = 13.3333
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -36,13 +36,12 @@ class WaypointUpdater(object):
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
         rospy.Subscriber('/current_velocity', TwistStamped, self.velocity_cb)
-
-        # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-
         rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+
         self.velocity = 0
         self.num_waypoints = 0
         self.waypoints = None
+        self.original_velocities = None
         self.update_wp_velocities = True
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
 
@@ -52,8 +51,10 @@ class WaypointUpdater(object):
     def waypoints_cb(self, msg):
         self.waypoints = msg.waypoints
         self.num_waypoints = len(self.waypoints)
+
+        self.original_velocities = np.zeros(self.num_waypoints)
         for wp_idx in range(self.num_waypoints):
-            self.set_waypoint_velocity(wp_idx, DESIRED_VELOCITY_MS)
+            self.original_velocities[wp_idx] = self.waypoints[wp_idx].twist.twist.linear.x
 
 
     def velocity_cb(self, msg):
@@ -80,9 +81,13 @@ class WaypointUpdater(object):
         #print("Pose: " + str(start_idx))
 
         for i in range(LOOKAHEAD_WPS):
-            idx = (i + start_idx) % self.num_waypoints
+            idx = (i + start_idx)
+            if idx >= self.num_waypoints:
+                break
+
             if self.update_wp_velocities:
-                self.set_waypoint_velocity(idx, DESIRED_VELOCITY_MS)
+                velocity = self.original_velocities[idx]
+                self.set_waypoint_velocity(idx, velocity)
             lane.waypoints.append(self.waypoints[idx])
 
         self.final_waypoints_pub.publish(lane)
@@ -125,7 +130,6 @@ class WaypointUpdater(object):
 
 
     def obstacle_cb(self, msg):
-        # TODO: Callback for /obstacle_waypoint message. We will implement it later
         pass
 
 

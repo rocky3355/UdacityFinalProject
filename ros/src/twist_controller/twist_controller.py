@@ -42,7 +42,7 @@ class Controller(object):
         if current_velocity.twist.linear.x < 1.0:
             steer = 0
         else:
-            steer = 2.0 * self.yaw_controller.get_steering(target_velocity.twist.linear.x, target_velocity.twist.angular.z, current_velocity.twist.linear.x)
+            steer = self.yaw_controller.get_steering(target_velocity.twist.linear.x, target_velocity.twist.angular.z, current_velocity.twist.linear.x)
 
         if current_velocity.twist.linear.x < 0.5 and target_velocity.twist.linear.x < 0.1:
             brake = STANDSTILL_BREAK_TORQUE
